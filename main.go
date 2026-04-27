@@ -16,25 +16,27 @@ func main() {
 func run() error {
 	cfg, err := NewConfig()
 	if err != nil {
-		return fmt.Errorf("NewConfig: %w", err)
+		return fmt.Errorf("new config: %w", err)
 	}
 
 	db, err := NewDatabase(cfg.DatabaseURL)
 	if err != nil {
-		return fmt.Errorf("NewDatabase: %w", err)
+		return fmt.Errorf("new database: %w", err)
 	}
 	defer db.Close()
 
 	h := NewHandler(db)
 
 	r := gin.Default()
-	r.SetTrustedProxies(nil)
+	if err := r.SetTrustedProxies(nil); err != nil {
+		return fmt.Errorf("gin set trusted proxies: %w", err)
+	}
 
 	r.POST("/waitlist", h.CreateWaitlistEmail)
 
 	fr := r.Group("/founders")
-	fr.GET("/founders", h.GetFoundingCreatorStats)
-	fr.POST("/founders", h.CreateWaitlistEmail)
+	fr.GET("", h.GetFoundingCreatorStats)
+	fr.POST("", h.CreateWaitlistEmail)
 
-	return r.Run(":" + cfg.Port)
+	return fmt.Errorf("gin run: %w", r.Run(":"+cfg.Port))
 }
