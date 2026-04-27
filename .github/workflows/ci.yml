@@ -20,7 +20,7 @@ jobs:
 
       - name: Check goimports
         run: |
-          files=$(make fmt)
+          files=$(goimports -l .)
           if [ -n "$files" ]; then
             echo "These files have incorrect imports:"
             echo "$files"
