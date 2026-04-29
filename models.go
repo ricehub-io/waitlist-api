@@ -32,9 +32,9 @@ type CreateWaitlistEmailRequest struct {
 }
 
 type GetFoundingCreatorStatsResponse struct {
-	SlotsTotal     int `json:"slots_total"`
-	SlotsTaken     int `json:"slots_taken"`
-	SlotsAvailable int `json:"slots_available"`
+	SlotsTotal     int `json:"slotsTotal"`
+	SlotsTaken     int `json:"slotsTaken"`
+	SlotsAvailable int `json:"slotsAvailable"`
 }
 
 type CreateFoundingCreatorRequest struct {

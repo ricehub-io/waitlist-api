@@ -5,7 +5,18 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/ricehub/waitlist-api/docs"
 )
+
+// @title RiceHub Waitlist API
+// @version 1.0
+// @description API for RiceHub waitlist frontend.
+
+// @host 127.0.0.1:3000
+// @BasePath /
 
 func main() {
 	if err := run(); err != nil {
@@ -38,5 +49,14 @@ func run() error {
 	fr.GET("", h.GetFoundingCreatorStats)
 	fr.POST("", h.CreateFoundingCreator)
 
-	return fmt.Errorf("gin run: %w", r.Run(":"+cfg.Port))
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(
+		swaggerFiles.Handler,
+		ginSwagger.URL("/swagger/doc.json"),
+	))
+
+	if err := r.Run(":" + cfg.Port); err != nil {
+		return fmt.Errorf("gin run: %w", err)
+	}
+
+	return nil
 }

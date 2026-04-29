@@ -1,0 +1,114 @@
+basePath: /
+definitions:
+  main.APIError:
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+    type: object
+  main.GetFoundingCreatorStatsResponse:
+    properties:
+      slotsAvailable:
+        type: integer
+      slotsTaken:
+        type: integer
+      slotsTotal:
+        type: integer
+    type: object
+host: 127.0.0.1:3000
+info:
+  contact: {}
+  description: API for RiceHub waitlist frontend.
+  title: RiceHub Waitlist API
+  version: "1.0"
+paths:
+  /founders:
+    get:
+      description: Returns total, taken, and available founding creator slots
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.GetFoundingCreatorStatsResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.APIError'
+      summary: Get founding creator slot statistics
+      tags:
+      - founders
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Submit application to become a founding creator
+      parameters:
+      - description: Username (4-14 alphanumeric characters)
+        in: formData
+        name: username
+        required: true
+        type: string
+      - description: Email address
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: URL to dotfiles repository or r/unixporn post
+        in: formData
+        name: dotfilesUrl
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/main.APIError'
+        "409":
+          description: Username or email already taken
+          schema:
+            $ref: '#/definitions/main.APIError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.APIError'
+      summary: Register as founding creator
+      tags:
+      - founders
+  /waitlist:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Adds a new email address to the waitlist
+      parameters:
+      - description: Email address
+        in: formData
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/main.APIError'
+        "409":
+          description: Email already on waitlist
+          schema:
+            $ref: '#/definitions/main.APIError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.APIError'
+      summary: Add email to waitlist
+      tags:
+      - waitlist
+swagger: "2.0"

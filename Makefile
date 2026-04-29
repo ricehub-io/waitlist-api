@@ -33,11 +33,16 @@ security:
 ## check: run fmt, vet, lint, and security
 check: fmt vet lint security
 
+## swagger: generate swagger docs from annotations
+swagger:
+	swag init
+
 ## install-tools: install required tools for fmt, lint, etc targets
 install-tools:
 	go install golang.org/x/tools/cmd/goimports@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/swaggo/swag/cmd/swag@latest
 
 ## help: list available targets
 help:
