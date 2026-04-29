@@ -21,7 +21,24 @@ type FounderApplicant struct {
 	CreatedAt   time.Time
 }
 
+type SlotStats struct {
+	SlotsTotal int
+	SlotsTaken int
+}
+
 // -- HTTP REQUESTS/RESPONSES --
 type CreateWaitlistEmailRequest struct {
-	Email string `json:"email" binding:"required,email"`
+	Email string `form:"email" binding:"required,email"`
+}
+
+type GetFoundingCreatorStatsResponse struct {
+	SlotsTotal     int `json:"slots_total"`
+	SlotsTaken     int `json:"slots_taken"`
+	SlotsAvailable int `json:"slots_available"`
+}
+
+type CreateFoundingCreatorRequest struct {
+	Username    string `form:"username" binding:"required,min=4,max=14,alphanum"`
+	Email       string `form:"email" binding:"required,email"`
+	DotfilesURL string `form:"dotfilesUrl" binding:"required,url"`
 }

@@ -32,15 +32,35 @@ func (db *Database) Close() {
 }
 
 // InsertWaitlistEmail inserts a new row with given email to waitlist_emails table.
-func (db *Database) InsertWaitlistEmail(ctx context.Context, email string) (WaitlistEmail, error) {
-	const query = "INSERT INTO waitlist_emails (email) VALUES ($1) RETURNING *"
+func (db *Database) InsertWaitlistEmail(ctx context.Context, email string) error {
+	const query = "INSERT INTO waitlist_emails (email) VALUES ($1)"
+	_, err := db.pool.Exec(ctx, query, email)
+	return fmt.Errorf("insert waitlist email: %w", err)
+}
 
-	row, err := rowToStruct[WaitlistEmail](ctx, db.pool, query, email)
+// InsertFoundingApplicant inserts a new row with given values to founder_applicants table.
+func (db *Database) InsertFoundingApplicant(
+	ctx context.Context,
+	username, email, dotfilesURL string,
+) error {
+	const query = `
+	INSERT INTO founder_applicants (username, email, dotfiles_url)
+	VALUES ($1, $2, $3)
+	`
+	_, err := db.pool.Exec(ctx, query, username, email, dotfilesURL)
 	if err != nil {
-		return WaitlistEmail{}, fmt.Errorf("insert waitlist email: %w", err)
+		return fmt.Errorf("insert founding applicant: %w", err)
 	}
+	return nil
+}
 
-	return row, nil
+func (db *Database) FetchSlotStats(ctx context.Context) (SlotStats, error) {
+	const query = "SELECT slots_total, slots_taken FROM settings LIMIT 1"
+	s, err := rowToStruct[SlotStats](ctx, db.pool, query)
+	if err != nil {
+		return s, fmt.Errorf("fetch slot stats: %w", err)
+	}
+	return s, nil
 }
 
 // -- HELPERS --

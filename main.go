@@ -36,7 +36,7 @@ func run() error {
 
 	fr := r.Group("/founders")
 	fr.GET("", h.GetFoundingCreatorStats)
-	fr.POST("", h.CreateWaitlistEmail)
+	fr.POST("", h.CreateFoundingCreator)
 
 	return fmt.Errorf("gin run: %w", r.Run(":"+cfg.Port))
 }
