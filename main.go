@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -39,6 +40,7 @@ func run() error {
 	h := NewHandler(db)
 
 	r := gin.Default()
+	r.Use(cors.Default())
 	if err := r.SetTrustedProxies(nil); err != nil {
 		return fmt.Errorf("gin set trusted proxies: %w", err)
 	}
