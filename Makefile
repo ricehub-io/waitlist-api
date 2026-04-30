@@ -30,8 +30,12 @@ lint:
 security:
 	govulncheck ./...
 
-## check: run fmt, vet, lint, and security
-check: fmt vet lint security
+## test: run integration and unit tests (requires Docker)
+test:
+	go test -race -count=1 ./...
+
+## check: run fmt, vet, lint, security, and tests
+check: fmt vet lint security test
 
 ## swagger: generate swagger docs from annotations
 swagger:

@@ -1,0 +1,8 @@
+ALTER TABLE founder_applicants
+RENAME CONSTRAINT founder_applications_pkey TO founder_applicants_pkey;
+
+ALTER TABLE founder_applicants
+RENAME CONSTRAINT founder_applications_email_key TO founder_applicants_email_key;
+
+ALTER TABLE founder_applicants
+RENAME CONSTRAINT founder_applications_username_key TO founder_applicants_username_key;

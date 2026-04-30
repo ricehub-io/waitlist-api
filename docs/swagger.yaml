@@ -16,12 +16,17 @@ definitions:
       slotsTotal:
         type: integer
     type: object
+  main.GetWaitlistEmailCountResponse:
+    properties:
+      count:
+        type: integer
+    type: object
 host: 127.0.0.1:3000
 info:
   contact: {}
   description: API for RiceHub waitlist frontend.
   title: RiceHub Waitlist API
-  version: "1.0"
+  version: 1.1.0
 paths:
   /founders:
     get:
@@ -81,6 +86,22 @@ paths:
       tags:
       - founders
   /waitlist:
+    get:
+      description: Returns total count
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.GetWaitlistEmailCountResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.APIError'
+      summary: Get amount of users in waitlist
+      tags:
+      - waitlist
     post:
       consumes:
       - application/x-www-form-urlencoded

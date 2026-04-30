@@ -4,7 +4,7 @@
         "description": "API for RiceHub waitlist frontend.",
         "title": "RiceHub Waitlist API",
         "contact": {},
-        "version": "1.0"
+        "version": "1.1.0"
     },
     "host": "127.0.0.1:3000",
     "basePath": "/",
@@ -95,6 +95,30 @@
             }
         },
         "/waitlist": {
+            "get": {
+                "description": "Returns total count",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "waitlist"
+                ],
+                "summary": "Get amount of users in waitlist",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.GetWaitlistEmailCountResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/main.APIError"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Adds a new email address to the waitlist",
                 "consumes": [
@@ -164,6 +188,14 @@
                     "type": "integer"
                 },
                 "slotsTotal": {
+                    "type": "integer"
+                }
+            }
+        },
+        "main.GetWaitlistEmailCountResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
                     "type": "integer"
                 }
             }

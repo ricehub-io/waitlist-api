@@ -19,6 +19,25 @@ func NewHandler(db *Database) *Handler {
 	return &Handler{db}
 }
 
+// GetWaitlistEmailCount godoc
+// @Summary Get amount of users in waitlist
+// @Description Returns total count
+// @Tags waitlist
+// @Produce json
+// @Success 200 {object} GetWaitlistEmailCountResponse
+// @Failure 500 {object} APIError "Internal server error"
+// @Router /waitlist [get]
+func (h *Handler) GetWaitlistEmailCount(c *gin.Context) {
+	count, err := h.db.WaitlistEmailCount(c.Request.Context())
+	if err != nil {
+		log.Printf("could not fetch waitlist email count: %v", err)
+		sendErrors(c, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	c.JSON(http.StatusOK, GetWaitlistEmailCountResponse{count})
+}
+
 // CreateWaitlistEmail godoc
 // @Summary Add email to waitlist
 // @Description Adds a new email address to the waitlist
@@ -105,8 +124,14 @@ func (h *Handler) CreateFoundingCreator(c *gin.Context) {
 	); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			// TODO: be more precise - let the user know whether its username or email
-			sendErrors(c, http.StatusConflict, "this username or email is already taken!")
+			switch pgErr.ConstraintName {
+			case "founder_applicants_username_key":
+				sendErrors(c, http.StatusConflict, "this username is already taken!")
+			case "founder_applicants_email_key":
+				sendErrors(c, http.StatusConflict, "this email is already taken!")
+			default:
+				sendErrors(c, http.StatusConflict, "this username or email is already taken!")
+			}
 			return
 		}
 

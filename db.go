@@ -31,14 +31,15 @@ func (db *Database) Close() {
 	db.pool.Close()
 }
 
-// InsertWaitlistEmail inserts a new row with given email to waitlist_emails table.
 func (db *Database) InsertWaitlistEmail(ctx context.Context, email string) error {
 	const query = "INSERT INTO waitlist_emails (email) VALUES ($1)"
 	_, err := db.pool.Exec(ctx, query, email)
-	return fmt.Errorf("insert waitlist email: %w", err)
+	if err != nil {
+		return fmt.Errorf("insert waitlist email: %w", err)
+	}
+	return nil
 }
 
-// InsertFoundingApplicant inserts a new row with given values to founder_applicants table.
 func (db *Database) InsertFoundingApplicant(
 	ctx context.Context,
 	username, email, dotfilesURL string,
@@ -61,6 +62,14 @@ func (db *Database) FetchSlotStats(ctx context.Context) (SlotStats, error) {
 		return s, fmt.Errorf("fetch slot stats: %w", err)
 	}
 	return s, nil
+}
+
+func (db *Database) WaitlistEmailCount(ctx context.Context) (count int, err error) {
+	const query = "SELECT COUNT(*) FROM waitlist_emails"
+	if err := db.pool.QueryRow(ctx, query).Scan(&count); err != nil {
+		return -1, fmt.Errorf("waitlist email count: %w", err)
+	}
+	return
 }
 
 // -- HELPERS --

@@ -27,6 +27,10 @@ type SlotStats struct {
 }
 
 // -- HTTP REQUESTS/RESPONSES --
+type GetWaitlistEmailCountResponse struct {
+	Count int `json:"count"`
+}
+
 type CreateWaitlistEmailRequest struct {
 	Email string `form:"email" binding:"required,email"`
 }

@@ -13,7 +13,7 @@ import (
 )
 
 // @title RiceHub Waitlist API
-// @version 1.0
+// @version 1.1.0
 // @description API for RiceHub waitlist frontend.
 
 // @host 127.0.0.1:3000
@@ -39,13 +39,39 @@ func run() error {
 
 	h := NewHandler(db)
 
-	r := gin.Default()
-	r.Use(cors.Default())
-	if err := r.SetTrustedProxies(nil); err != nil {
-		return fmt.Errorf("gin set trusted proxies: %w", err)
+	r, err := newRouter(&cfg.CORSOrigin, h)
+	if err != nil {
+		return err
 	}
 
-	r.POST("/waitlist", h.CreateWaitlistEmail)
+	if err := r.Run(":" + cfg.Port); err != nil {
+		return fmt.Errorf("gin run: %w", err)
+	}
+
+	return nil
+}
+
+func newRouter(corsOrigin *string, h *Handler) (*gin.Engine, error) {
+	r := gin.Default()
+	if err := r.SetTrustedProxies(nil); err != nil {
+		return nil, fmt.Errorf("gin set trusted proxies: %w", err)
+	}
+
+	c := cors.Default()
+	if corsOrigin != nil {
+		c = cors.New(cors.Config{
+			AllowOrigins: []string{*corsOrigin},
+			AllowMethods: []string{"GET", "POST"},
+			AllowHeaders: []string{"Origin", "Content-Type"},
+		})
+	} else {
+		log.Println("WARNING! Using default (permissive) cors config")
+	}
+	r.Use(c)
+
+	wr := r.Group("/waitlist")
+	wr.GET("", h.GetWaitlistEmailCount)
+	wr.POST("", h.CreateWaitlistEmail)
 
 	fr := r.Group("/founders")
 	fr.GET("", h.GetFoundingCreatorStats)
@@ -56,9 +82,5 @@ func run() error {
 		ginSwagger.URL("/swagger/doc.json"),
 	))
 
-	if err := r.Run(":" + cfg.Port); err != nil {
-		return fmt.Errorf("gin run: %w", err)
-	}
-
-	return nil
+	return r, nil
 }

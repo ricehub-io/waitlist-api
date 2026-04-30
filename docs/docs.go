@@ -101,6 +101,30 @@ const docTemplate = `{
             }
         },
         "/waitlist": {
+            "get": {
+                "description": "Returns total count",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "waitlist"
+                ],
+                "summary": "Get amount of users in waitlist",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.GetWaitlistEmailCountResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/main.APIError"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Adds a new email address to the waitlist",
                 "consumes": [
@@ -173,13 +197,21 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        },
+        "main.GetWaitlistEmailCountResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                }
+            }
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "1.1.0",
 	Host:             "127.0.0.1:3000",
 	BasePath:         "/",
 	Schemes:          []string{},
