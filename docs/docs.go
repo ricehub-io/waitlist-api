@@ -100,6 +100,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/rices": {
+            "get": {
+                "description": "Returns a list of all preview rices ordered by creation date",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rices"
+                ],
+                "summary": "Get all preview rices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.GetPreviewRicesResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/main.APIError"
+                        }
+                    }
+                }
+            }
+        },
         "/waitlist": {
             "get": {
                 "description": "Returns total count",
@@ -195,6 +224,35 @@ const docTemplate = `{
                 },
                 "slotsTotal": {
                     "type": "integer"
+                }
+            }
+        },
+        "main.GetPreviewRicesResponse": {
+            "type": "object",
+            "properties": {
+                "downloadCount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "starCount": {
+                    "type": "integer"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "thumbnailUrl": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },

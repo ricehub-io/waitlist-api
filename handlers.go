@@ -11,12 +11,32 @@ import (
 )
 
 type Handler struct {
-	db *Database
+	cfg *Config
+	db  *Database
 }
 
 // NewHandler instantiates HTTP handler with given DB wrapper instance.
-func NewHandler(db *Database) *Handler {
-	return &Handler{db}
+func NewHandler(cfg *Config, db *Database) *Handler {
+	return &Handler{cfg, db}
+}
+
+// GetPreviewRices godoc
+// @Summary Get all preview rices
+// @Description Returns a list of all preview rices ordered by creation date
+// @Tags rices
+// @Produce json
+// @Success 200 {array} GetPreviewRicesResponse
+// @Failure 500 {object} APIError "Internal server error"
+// @Router /rices [get]
+func (h *Handler) GetPreviewRices(c *gin.Context) {
+	rices, err := h.db.FetchPreviewRices(c.Request.Context())
+	if err != nil {
+		log.Printf("could not fetch preview rices: %v", err)
+		sendErrors(c, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	c.JSON(http.StatusOK, rices.ToResponse(h.cfg.StorageBaseURL))
 }
 
 // GetWaitlistEmailCount godoc

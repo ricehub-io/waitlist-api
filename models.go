@@ -7,6 +7,18 @@ import (
 )
 
 // -- DATABASE MODELS --
+type PreviewRice struct {
+	ID            uuid.UUID
+	Title         string
+	Price         *float64
+	ThumbnailPath string
+	DownloadCount int
+	StarCount     int
+	Tags          []string
+	CreatedAt     time.Time
+}
+type PreviewRices []PreviewRice
+
 type WaitlistEmail struct {
 	ID        uuid.UUID
 	Email     string
@@ -27,6 +39,34 @@ type SlotStats struct {
 }
 
 // -- HTTP REQUESTS/RESPONSES --
+type GetPreviewRicesResponse struct {
+	ID            uuid.UUID `json:"id"`
+	Title         string    `json:"title"`
+	Price         *float64  `json:"price,omitempty"`
+	ThumbnailURL  string    `json:"thumbnailUrl"`
+	DownloadCount int       `json:"downloadCount"`
+	StarCount     int       `json:"starCount"`
+	Tags          []string  `json:"tags"`
+}
+
+func (rices PreviewRices) ToResponse(storageBaseURL string) []GetPreviewRicesResponse {
+	resp := make([]GetPreviewRicesResponse, len(rices))
+
+	for i, r := range rices {
+		resp[i] = GetPreviewRicesResponse{
+			ID:            r.ID,
+			Title:         r.Title,
+			Price:         r.Price,
+			ThumbnailURL:  storageBaseURL + "/" + r.ThumbnailPath,
+			DownloadCount: r.DownloadCount,
+			StarCount:     r.StarCount,
+			Tags:          r.Tags,
+		}
+	}
+
+	return resp
+}
+
 type GetWaitlistEmailCountResponse struct {
 	Count int `json:"count"`
 }

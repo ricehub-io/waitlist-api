@@ -56,6 +56,73 @@ func assertErrorContains(t *testing.T, body map[string]any, substr string) {
 	t.Errorf("expected an error containing %q, got %v", substr, errs)
 }
 
+// -- GET /rices --
+func TestGetPreviewRices_Empty(t *testing.T) {
+	resetDB(t)
+	resp, err := http.Get(testServer.URL + "/rices")
+	require.NoError(t, err)
+	defer silentClose(resp.Body)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body []any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Empty(t, body)
+}
+
+func TestGetPreviewRices_WithRows(t *testing.T) {
+	resetDB(t)
+	price := 9.99
+	seedPreviewRice(t, "Arch Rice", "arch.png", nil)
+	seedPreviewRice(t, "Paid Rice", "paid.png", &price)
+
+	resp, err := http.Get(testServer.URL + "/rices")
+	require.NoError(t, err)
+	defer silentClose(resp.Body)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body []map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Len(t, body, 2)
+
+	titlesSet := map[string]bool{}
+	for _, r := range body {
+		titlesSet[r["title"].(string)] = true
+		assert.Contains(t, r, "id")
+		assert.Contains(t, r, "thumbnailUrl")
+		assert.Contains(t, r, "downloadCount")
+		assert.Contains(t, r, "starCount")
+		assert.Contains(t, r, "tags")
+	}
+	assert.True(t, titlesSet["Arch Rice"])
+	assert.True(t, titlesSet["Paid Rice"])
+}
+
+func TestGetPreviewRices_PriceNullableField(t *testing.T) {
+	resetDB(t)
+	price := 2.50
+	seedPreviewRice(t, "Free Rice", "free.png", nil)
+	seedPreviewRice(t, "Paid Rice", "paid.png", &price)
+
+	resp, err := http.Get(testServer.URL + "/rices")
+	require.NoError(t, err)
+	defer silentClose(resp.Body)
+
+	var body []map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	require.Len(t, body, 2)
+
+	for _, r := range body {
+		switch r["title"] {
+		case "Free Rice":
+			assert.Nil(t, r["price"])
+		case "Paid Rice":
+			assert.InDelta(t, 2.50, r["price"].(float64), 0.001)
+		}
+	}
+}
+
 // -- GET /waitlist --
 func TestGetWaitlistEmailCount_Empty(t *testing.T) {
 	resetDB(t)

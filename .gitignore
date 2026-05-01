@@ -1,2 +1,4 @@
 .env
 build/
+storage/screenshots/*
+!storage/screenshots/.gitkeep

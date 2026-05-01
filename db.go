@@ -64,6 +64,25 @@ func (db *Database) FetchSlotStats(ctx context.Context) (SlotStats, error) {
 	return s, nil
 }
 
+func (db *Database) FetchPreviewRices(ctx context.Context) (PreviewRices, error) {
+	const query = `
+	SELECT id, title, price, thumbnail_path, download_count, star_count, tags, created_at
+	FROM preview_rices
+	ORDER BY created_at DESC
+	`
+	rows, err := db.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("fetch preview rices: %w", err)
+	}
+
+	rices, err := pgx.CollectRows(rows, pgx.RowToStructByName[PreviewRice])
+	if err != nil {
+		return nil, fmt.Errorf("fetch preview rices: %w", err)
+	}
+
+	return rices, nil
+}
+
 func (db *Database) WaitlistEmailCount(ctx context.Context) (count int, err error) {
 	const query = "SELECT COUNT(*) FROM waitlist_emails"
 	if err := db.pool.QueryRow(ctx, query).Scan(&count); err != nil {

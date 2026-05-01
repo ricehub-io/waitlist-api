@@ -18,6 +18,7 @@ import (
 
 var (
 	testDB     *Database
+	testCfg    *Config
 	testServer *httptest.Server
 )
 
@@ -54,7 +55,9 @@ func TestMain(m *testing.M) {
 		panic("apply migrations: " + err.Error())
 	}
 
-	h := NewHandler(testDB)
+	testCfg = &Config{}
+
+	h := NewHandler(testCfg, testDB)
 	r, err := newRouter(nil, h)
 	if err != nil {
 		panic("new router: " + err.Error())
@@ -87,7 +90,7 @@ func resetDB(t *testing.T) {
 	t.Helper()
 	_, err := testDB.pool.Exec(
 		context.Background(),
-		`TRUNCATE waitlist_emails, founder_applicants;
+		`TRUNCATE waitlist_emails, founder_applicants, preview_rices;
 		UPDATE settings SET slots_total = 10, slots_taken = 0 WHERE id = 1;`,
 	)
 	require.NoError(t, err)
@@ -102,6 +105,16 @@ func seedWaitlist(t *testing.T, emails ...string) {
 		)
 		require.NoError(t, err)
 	}
+}
+
+func seedPreviewRice(t *testing.T, title, thumbnailPath string, price *float64) {
+	t.Helper()
+	_, err := testDB.pool.Exec(
+		context.Background(),
+		"INSERT INTO preview_rices (title, thumbnail_path, price) VALUES ($1, $2, $3)",
+		title, thumbnailPath, price,
+	)
+	require.NoError(t, err)
 }
 
 func seedFounder(t *testing.T, username, email, dotfilesURL string) {

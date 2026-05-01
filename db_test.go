@@ -11,6 +11,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFetchPreviewRices_Empty(t *testing.T) {
+	resetDB(t)
+	rices, err := testDB.FetchPreviewRices(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, rices)
+}
+
+func TestFetchPreviewRices_WithRows(t *testing.T) {
+	resetDB(t)
+	price := 4.99
+	seedPreviewRice(t, "My Rice", "thumb1.png", nil)
+	seedPreviewRice(t, "Paid Rice", "thumb2.png", &price)
+
+	rices, err := testDB.FetchPreviewRices(context.Background())
+	require.NoError(t, err)
+	assert.Len(t, rices, 2)
+
+	titlesSet := map[string]bool{}
+	for _, r := range rices {
+		titlesSet[r.Title] = true
+	}
+	assert.True(t, titlesSet["My Rice"])
+	assert.True(t, titlesSet["Paid Rice"])
+}
+
+func TestFetchPreviewRices_OrderedByCreatedAtDesc(t *testing.T) {
+	resetDB(t)
+	seedPreviewRice(t, "First Rice", "thumb1.png", nil)
+	seedPreviewRice(t, "Second Rice", "thumb2.png", nil)
+
+	rices, err := testDB.FetchPreviewRices(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rices, 2)
+	assert.True(t, !rices[0].CreatedAt.Before(rices[1].CreatedAt))
+}
+
 func TestWaitlistEmailCount_Empty(t *testing.T) {
 	resetDB(t)
 	count, err := testDB.WaitlistEmailCount(context.Background())

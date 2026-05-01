@@ -37,7 +37,7 @@ func run() error {
 	}
 	defer db.Close()
 
-	h := NewHandler(db)
+	h := NewHandler(cfg, db)
 
 	r, err := newRouter(&cfg.CORSOrigin, h)
 	if err != nil {
@@ -77,10 +77,14 @@ func newRouter(corsOrigin *string, h *Handler) (*gin.Engine, error) {
 	fr.GET("", h.GetFoundingCreatorStats)
 	fr.POST("", h.CreateFoundingCreator)
 
+	r.GET("/rices", h.GetPreviewRices)
+
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(
 		swaggerFiles.Handler,
 		ginSwagger.URL("/swagger/doc.json"),
 	))
+
+	r.Static("/storage", "./storage")
 
 	return r, nil
 }

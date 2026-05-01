@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	Port        string
-	DatabaseURL string
-	CORSOrigin  string
+	Port           string
+	DatabaseURL    string
+	CORSOrigin     string
+	StorageBaseURL string
 }
 
 // NewConfig loads .env file and parses it into new config struct.
@@ -21,10 +22,12 @@ func NewConfig() (*Config, error) {
 		return nil, err
 	}
 
+	port := getOptEnv("PORT", "3000")
 	return &Config{
-		Port:        getOptEnv("PORT", "3000"),
-		DatabaseURL: getEnv("DATABASE_URL"),
-		CORSOrigin:  getOptEnv("CORS_ORIGIN", "http://127.0.0.1:5173"),
+		Port:           port,
+		DatabaseURL:    getEnv("DATABASE_URL"),
+		CORSOrigin:     getOptEnv("CORS_ORIGIN", "http://127.0.0.1:5173"),
+		StorageBaseURL: getOptEnv("STORAGE_BASE_URL", "http://127.0.0.1:"+port+"/storage"),
 	}, nil
 }
 
