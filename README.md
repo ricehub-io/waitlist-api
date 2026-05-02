@@ -1,0 +1,1 @@
+# RiceHub Waitlist API
