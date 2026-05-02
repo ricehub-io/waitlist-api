@@ -13,7 +13,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	_ "github.com/ricehub/waitlist-api/docs"
+	_ "github.com/ricehub-io/waitlist-api/docs"
 )
 
 // @title RiceHub Waitlist API

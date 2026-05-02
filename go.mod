@@ -1,4 +1,4 @@
-module github.com/ricehub/waitlist-api
+module github.com/ricehub-io/waitlist-api
 
 go 1.26.2
 
