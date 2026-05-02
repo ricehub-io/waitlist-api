@@ -1,6 +1,7 @@
 package main
 
 import (
+	"mime/multipart"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,6 +50,8 @@ type GetPreviewRicesResponse struct {
 	Tags          []string  `json:"tags"`
 }
 
+// ToResponse converts given preview rice models to http-friendly response.
+// storageBaseURL must not end with a leading slash.
 func (rices PreviewRices) ToResponse(storageBaseURL string) []GetPreviewRicesResponse {
 	resp := make([]GetPreviewRicesResponse, len(rices))
 
@@ -85,4 +88,13 @@ type CreateFoundingCreatorRequest struct {
 	Username    string `form:"username" binding:"required,min=4,max=14,alphanum"`
 	Email       string `form:"email" binding:"required,email"`
 	DotfilesURL string `form:"dotfilesUrl" binding:"required,url"`
+}
+
+type CreatePreviewRiceRequest struct {
+	Title         string                `form:"title" binding:"required,min=4,max=32,ricetitle"`
+	Price         *float64              `form:"price" binding:"omitempty,gt=0"`
+	StarCount     int                   `form:"starCount" binding:"gte=0"`
+	DownloadCount int                   `form:"downloadCount" binding:"gte=0"`
+	Tags          []string              `form:"tags" binding:"required"`
+	Thumbnail     *multipart.FileHeader `form:"thumbnail" binding:"required"`
 }

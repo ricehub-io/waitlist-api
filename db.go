@@ -83,6 +83,25 @@ func (db *Database) FetchPreviewRices(ctx context.Context) (PreviewRices, error)
 	return rices, nil
 }
 
+func (db *Database) InsertPreviewRice(
+	ctx context.Context,
+	title string,
+	price *float64,
+	thumbnailPath string,
+	starCount, downloadCount int,
+	tags []string,
+) error {
+	const query = `
+	INSERT INTO preview_rices (title, price, thumbnail_path, star_count, download_count, tags)
+	VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	_, err := db.pool.Exec(ctx, query, title, price, thumbnailPath, starCount, downloadCount, tags)
+	if err != nil {
+		return fmt.Errorf("insert preview rice: %w", err)
+	}
+	return nil
+}
+
 func (db *Database) WaitlistEmailCount(ctx context.Context) (count int, err error) {
 	const query = "SELECT COUNT(*) FROM waitlist_emails"
 	if err := db.pool.QueryRow(ctx, query).Scan(&count); err != nil {

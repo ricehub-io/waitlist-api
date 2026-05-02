@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/png"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"strings"
 	"testing"
@@ -14,16 +19,68 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// -- HELPERS --
-func silentClose(c io.Closer) {
-	_ = c.Close()
+func validPNG() []byte {
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	var buf bytes.Buffer
+	_ = png.Encode(&buf, img)
+	return buf.Bytes()
+}
+
+type multipartField struct {
+	name  string
+	value string
+}
+
+func postMultipart(
+	t *testing.T,
+	path string,
+	fields []multipartField,
+	fileName, fileContentType string,
+	fileContent []byte,
+	adminSecret string,
+) (int, map[string]any) {
+	t.Helper()
+
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+
+	for _, f := range fields {
+		require.NoError(t, w.WriteField(f.name, f.value))
+	}
+
+	if fileContent != nil {
+		h := make(textproto.MIMEHeader)
+		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="thumbnail"; filename="%s"`, fileName))
+		h.Set("Content-Type", fileContentType)
+		part, err := w.CreatePart(h)
+		require.NoError(t, err)
+		_, err = part.Write(fileContent)
+		require.NoError(t, err)
+	}
+	require.NoError(t, w.Close())
+
+	req, err := http.NewRequest(http.MethodPost, testServer.URL+path, &b)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set("X-Admin-Secret", adminSecret)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer closeSilent(resp.Body)
+
+	body := map[string]any{}
+	raw, _ := io.ReadAll(resp.Body)
+	if len(raw) > 0 {
+		_ = json.Unmarshal(raw, &body)
+	}
+	return resp.StatusCode, body
 }
 
 func getJSON(t *testing.T, path string) (int, map[string]any) {
 	t.Helper()
 	resp, err := http.Get(testServer.URL + path)
 	require.NoError(t, err)
-	defer silentClose(resp.Body)
+	defer closeSilent(resp.Body)
 
 	var body map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
@@ -34,7 +91,7 @@ func postForm(t *testing.T, path string, values url.Values) (int, map[string]any
 	t.Helper()
 	resp, err := http.PostForm(testServer.URL+path, values)
 	require.NoError(t, err)
-	defer silentClose(resp.Body)
+	defer closeSilent(resp.Body)
 
 	body := map[string]any{}
 	b, _ := io.ReadAll(resp.Body)
@@ -61,7 +118,7 @@ func TestGetPreviewRices_Empty(t *testing.T) {
 	resetDB(t)
 	resp, err := http.Get(testServer.URL + "/rices")
 	require.NoError(t, err)
-	defer silentClose(resp.Body)
+	defer closeSilent(resp.Body)
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -78,7 +135,7 @@ func TestGetPreviewRices_WithRows(t *testing.T) {
 
 	resp, err := http.Get(testServer.URL + "/rices")
 	require.NoError(t, err)
-	defer silentClose(resp.Body)
+	defer closeSilent(resp.Body)
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -107,7 +164,7 @@ func TestGetPreviewRices_PriceNullableField(t *testing.T) {
 
 	resp, err := http.Get(testServer.URL + "/rices")
 	require.NoError(t, err)
-	defer silentClose(resp.Body)
+	defer closeSilent(resp.Body)
 
 	var body []map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
@@ -381,4 +438,155 @@ func TestCreateFoundingCreator_DuplicateEmailCaseInsensitive(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusConflict, status)
 	assertErrorContains(t, body, "email is already taken")
+}
+
+// -- POST /rices --
+func riceFields(title, starCount, downloadCount string, tags []string) []multipartField {
+	mpf := make([]multipartField, 0, 3+len(tags))
+
+	mpf = append(mpf, multipartField{name: "title", value: title})
+	mpf = append(mpf, multipartField{name: "starCount", value: starCount})
+	mpf = append(mpf, multipartField{name: "downloadCount", value: downloadCount})
+
+	for _, tag := range tags {
+		mpf = append(mpf, multipartField{name: "tags", value: tag})
+	}
+
+	return mpf
+}
+
+func TestCreatePreviewRice_Unauthorized(t *testing.T) {
+	resetDB(t)
+	fields := riceFields("Im Unathorized", "5", "7", []string{"test"})
+	status, body := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), "")
+	assert.Equal(t, http.StatusUnauthorized, status)
+	assertErrorContains(t, body, "unauthorized")
+}
+
+func TestCreatePreviewRice_HappyPath(t *testing.T) {
+	resetDB(t)
+	fields := riceFields("My Rice", "10", "5", []string{"test"})
+	status, _ := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusCreated, status)
+
+	var count int
+	err := testDB.pool.QueryRow(
+		context.Background(),
+		"SELECT COUNT(*) FROM preview_rices WHERE title = 'My Rice'",
+	).Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+}
+
+func TestCreatePreviewRice_HappyPathWithPriceAndTags(t *testing.T) {
+	resetDB(t)
+	fields := append(riceFields("Paid Rice", "3", "7", []string{"test"}),
+		multipartField{name: "price", value: "9.99"},
+		multipartField{name: "tags", value: "dark"},
+		multipartField{name: "tags", value: "minimal"},
+	)
+	status, _ := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusCreated, status)
+
+	var price float64
+	var tags []string
+	err := testDB.pool.QueryRow(
+		context.Background(),
+		"SELECT price, tags FROM preview_rices WHERE title = 'Paid Rice'",
+	).Scan(&price, &tags)
+	require.NoError(t, err)
+	assert.InDelta(t, 9.99, price, 0.001)
+	assert.ElementsMatch(t, []string{"test", "dark", "minimal"}, tags)
+}
+
+func TestCreatePreviewRice_MissingTitle(t *testing.T) {
+	resetDB(t)
+	fields := []multipartField{
+		{name: "starCount", value: "0"},
+		{name: "downloadCount", value: "0"},
+	}
+	status, body := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assertErrorContains(t, body, "Title")
+}
+
+func TestCreatePreviewRice_InvalidPrice(t *testing.T) {
+	resetDB(t)
+	fields := append(riceFields("Bad Price Rice", "0", "0", []string{"test"}),
+		multipartField{name: "price", value: "not-a-price"},
+	)
+	status, body := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assertErrorContains(t, body, "price")
+}
+
+func TestCreatePreviewRice_ZeroPrice(t *testing.T) {
+	resetDB(t)
+	fields := append(riceFields("Zero Price Rice", "0", "0", []string{"test"}),
+		multipartField{name: "price", value: "0"},
+	)
+	status, body := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assertErrorContains(t, body, "Price")
+}
+
+func TestCreatePreviewRice_InvalidStarCount(t *testing.T) {
+	resetDB(t)
+	fields := []multipartField{
+		{name: "title", value: "Rice"},
+		{name: "starCount", value: "abc"},
+		{name: "downloadCount", value: "0"},
+	}
+	status, body := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assertErrorContains(t, body, "abc")
+}
+
+func TestCreatePreviewRice_NegativeDownloadCount(t *testing.T) {
+	resetDB(t)
+	fields := []multipartField{
+		{name: "title", value: "Rice"},
+		{name: "starCount", value: "0"},
+		{name: "downloadCount", value: "-1"},
+	}
+	status, body := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assertErrorContains(t, body, "DownloadCount")
+}
+
+func TestCreatePreviewRice_MissingThumbnail(t *testing.T) {
+	resetDB(t)
+	fields := riceFields("No Thumb Rice", "0", "0", []string{"test"})
+	status, body := postMultipart(t, "/rices", fields, "", "", nil, testCfg.AdminSecret)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assertErrorContains(t, body, "Thumbnail")
+}
+
+func TestCreatePreviewRice_MissingTags(t *testing.T) {
+	resetDB(t)
+	fields := []multipartField{
+		{name: "title", value: "No Tags Rice"},
+		{name: "starCount", value: "0"},
+		{name: "downloadCount", value: "0"},
+	}
+	status, body := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assertErrorContains(t, body, "Tags")
+}
+
+func TestCreatePreviewRice_InvalidThumbnailType(t *testing.T) {
+	resetDB(t)
+	fields := riceFields("Bad Type Rice", "0", "0", []string{"test"})
+	status, body := postMultipart(t, "/rices", fields, "thumb.gif", "image/gif", []byte("GIF89a"), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assertErrorContains(t, body, "thumbnail must be")
+}
+
+func TestCreatePreviewRice_DuplicateTitle(t *testing.T) {
+	resetDB(t)
+	seedPreviewRice(t, "Existing Rice", "existing.png", nil)
+	fields := riceFields("Existing Rice", "0", "0", []string{"test"})
+	status, body := postMultipart(t, "/rices", fields, "thumb.png", "image/png", validPNG(), testCfg.AdminSecret)
+	assert.Equal(t, http.StatusConflict, status)
+	assertErrorContains(t, body, "already exists")
 }

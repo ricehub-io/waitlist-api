@@ -127,6 +127,106 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminSecret": []
+                    }
+                ],
+                "description": "Uploads thumbnail to S3 and stores rice metadata",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rices"
+                ],
+                "summary": "Create a preview rice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Admin secret key",
+                        "name": "X-Admin-Secret",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Rice title",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Price (e.g. 15.29, must be \u003e 0)",
+                        "name": "price",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Thumbnail image (png, jpeg, webp)",
+                        "name": "thumbnail",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Star count",
+                        "name": "starCount",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Download count",
+                        "name": "downloadCount",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Tags",
+                        "name": "tags",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/main.APIError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/main.APIError"
+                        }
+                    },
+                    "409": {
+                        "description": "Title already exists",
+                        "schema": {
+                            "$ref": "#/definitions/main.APIError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/main.APIError"
+                        }
+                    }
+                }
             }
         },
         "/waitlist": {
@@ -264,12 +364,19 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "AdminSecret": {
+            "type": "apiKey",
+            "name": "X-Admin-Secret",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.1.0",
+	Version:          "1.2.0",
 	Host:             "127.0.0.1:3000",
 	BasePath:         "/",
 	Schemes:          []string{},

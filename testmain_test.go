@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -18,14 +19,28 @@ import (
 
 var (
 	testDB     *Database
-	testCfg    *Config
 	testServer *httptest.Server
 )
+
+type mockStorer struct{}
+
+func (m *mockStorer) UploadFile(_ context.Context, _, _ string, _ io.Reader, _ string) error {
+	return nil
+}
+
+var testCfg = &Config{
+	S3BaseURL:     "http://localhost",
+	S3MediaBucket: "test-bucket",
+	CORSOrigin:    "http://localhost",
+	AdminSecret:   "test-admin-secret",
+}
 
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
 
 	ctx := context.Background()
+
+	initCustomValidation()
 
 	ctr, err := tcpostgres.Run(ctx, "postgres:16-alpine",
 		tcpostgres.WithDatabase("ricehub_test"),
@@ -55,10 +70,8 @@ func TestMain(m *testing.M) {
 		panic("apply migrations: " + err.Error())
 	}
 
-	testCfg = &Config{}
-
-	h := NewHandler(testCfg, testDB)
-	r, err := newRouter(nil, h)
+	h := NewHandler(testCfg, testDB, &mockStorer{})
+	r, err := newRouter(testCfg, h)
 	if err != nil {
 		panic("new router: " + err.Error())
 	}

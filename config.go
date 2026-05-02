@@ -8,10 +8,14 @@ import (
 )
 
 type Config struct {
-	Port           string
-	DatabaseURL    string
-	CORSOrigin     string
-	StorageBaseURL string
+	Port          string
+	DatabaseURL   string
+	CORSOrigin    string
+	S3BaseURL     string
+	S3MediaBucket string
+	S3AccessKey   string
+	S3SecretKey   string
+	AdminSecret   string
 }
 
 // NewConfig loads .env file and parses it into new config struct.
@@ -22,12 +26,15 @@ func NewConfig() (*Config, error) {
 		return nil, err
 	}
 
-	port := getOptEnv("PORT", "3000")
 	return &Config{
-		Port:           port,
-		DatabaseURL:    getEnv("DATABASE_URL"),
-		CORSOrigin:     getOptEnv("CORS_ORIGIN", "http://127.0.0.1:5173"),
-		StorageBaseURL: getOptEnv("STORAGE_BASE_URL", "http://127.0.0.1:"+port+"/storage"),
+		Port:          getOptEnv("PORT", "3000"),
+		DatabaseURL:   getEnv("DATABASE_URL"),
+		CORSOrigin:    getOptEnv("CORS_ORIGIN", "http://127.0.0.1:5173"),
+		S3BaseURL:     getEnv("S3_BASE_URL"),
+		S3MediaBucket: getEnv("S3_MEDIA_BUCKET"),
+		S3AccessKey:   getEnv("S3_ACCESS_KEY"),
+		S3SecretKey:   getEnv("S3_SECRET_KEY"),
+		AdminSecret:   getEnv("ADMIN_SECRET"),
 	}, nil
 }
 

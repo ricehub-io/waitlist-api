@@ -45,7 +45,7 @@ info:
   contact: {}
   description: API for RiceHub waitlist frontend.
   title: RiceHub Waitlist API
-  version: 1.1.0
+  version: 1.2.0
 paths:
   /founders:
     get:
@@ -123,6 +123,73 @@ paths:
       summary: Get all preview rices
       tags:
       - rices
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads thumbnail to S3 and stores rice metadata
+      parameters:
+      - description: Admin secret key
+        in: header
+        name: X-Admin-Secret
+        required: true
+        type: string
+      - description: Rice title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Price (e.g. 15.29, must be > 0)
+        in: formData
+        name: price
+        type: number
+      - description: Thumbnail image (png, jpeg, webp)
+        in: formData
+        name: thumbnail
+        required: true
+        type: file
+      - description: Star count
+        in: formData
+        name: starCount
+        required: true
+        type: integer
+      - description: Download count
+        in: formData
+        name: downloadCount
+        required: true
+        type: integer
+      - collectionFormat: csv
+        description: Tags
+        in: formData
+        items:
+          type: string
+        name: tags
+        type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/main.APIError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.APIError'
+        "409":
+          description: Title already exists
+          schema:
+            $ref: '#/definitions/main.APIError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.APIError'
+      security:
+      - AdminSecret: []
+      summary: Create a preview rice
+      tags:
+      - rices
   /waitlist:
     get:
       description: Returns total count
@@ -170,4 +237,9 @@ paths:
       summary: Add email to waitlist
       tags:
       - waitlist
+securityDefinitions:
+  AdminSecret:
+    in: header
+    name: X-Admin-Secret
+    type: apiKey
 swagger: "2.0"
