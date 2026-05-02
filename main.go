@@ -34,7 +34,9 @@ func main() {
 }
 
 func run() error {
-	initCustomValidation()
+	if err := initCustomValidation(); err != nil {
+		return fmt.Errorf("init custom validation: %w", err)
+	}
 
 	cfg, err := NewConfig()
 	if err != nil {
@@ -98,13 +100,17 @@ func newRouter(cfg *Config, h *Handler) (*gin.Engine, error) {
 	return r, nil
 }
 
-func initCustomValidation() {
+func initCustomValidation() error {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("ricetitle", func(fl validator.FieldLevel) bool {
+		if err := v.RegisterValidation("ricetitle", func(fl validator.FieldLevel) bool {
 			re := regexp.MustCompile(`^[a-zA-Z0-9 '_-]+$`)
 			return re.MatchString(fl.Field().String())
-		})
+		}); err != nil {
+			return fmt.Errorf("ricetitle validation: %w", err)
+		}
 	}
+
+	return nil
 }
 
 func adminMiddleware(adminSecret string) gin.HandlerFunc {

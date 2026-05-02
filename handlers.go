@@ -292,9 +292,9 @@ func openThumbnail(mime string, fh *multipart.FileHeader) (io.ReadCloser, error)
 type tempFile struct{ *os.File }
 
 func (t *tempFile) Close() error {
-	name := t.File.Name()
+	name := t.Name()
 	err := t.File.Close()
-	os.Remove(name)
+	_ = os.Remove(name)
 	return err
 }
 
@@ -319,14 +319,14 @@ func imageToWebP(fh *multipart.FileHeader) (*tempFile, error) {
 		Lossless: false,
 		Quality:  85.0,
 	}); err != nil {
-		outFile.Close()
-		os.Remove(outFile.Name())
+		_ = outFile.Close()
+		_ = os.Remove(outFile.Name())
 		return nil, fmt.Errorf("webp encode: %w", err)
 	}
 
 	if _, err := outFile.Seek(0, io.SeekStart); err != nil {
-		outFile.Close()
-		os.Remove(outFile.Name())
+		_ = outFile.Close()
+		_ = os.Remove(outFile.Name())
 		return nil, fmt.Errorf("seek temp file: %w", err)
 	}
 

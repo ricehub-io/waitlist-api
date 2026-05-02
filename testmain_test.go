@@ -40,7 +40,9 @@ func TestMain(m *testing.M) {
 
 	ctx := context.Background()
 
-	initCustomValidation()
+	if err := initCustomValidation(); err != nil {
+		panic("init custom validation: " + err.Error())
+	}
 
 	ctr, err := tcpostgres.Run(ctx, "postgres:16-alpine",
 		tcpostgres.WithDatabase("ricehub_test"),
