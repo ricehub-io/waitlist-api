@@ -5,6 +5,8 @@ CMD 	:= .
 GOFLAGS := -trimpath
 LDFLAGS := -ldflags="-s -w"
 
+.PHONY: build run fmt vet lint security test check swagger install-tools
+
 ## build: compile the binary to ./build/api
 build:
 	@mkdir -p $(OUT_DIR)
