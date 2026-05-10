@@ -34,7 +34,7 @@ security:
 
 ## test: run integration and unit tests (requires Docker)
 test:
-	go test -race -count=1 ./...
+	go test -race ./...
 
 ## check: run fmt, vet, lint, security, and tests
 check: fmt vet lint security test
