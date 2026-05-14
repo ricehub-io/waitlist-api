@@ -17,7 +17,7 @@ import (
 )
 
 // @title RiceHub Waitlist API
-// @version 1.2.0
+// @version 1.3.0
 // @description API for RiceHub waitlist frontend.
 
 // @host 127.0.0.1:3000

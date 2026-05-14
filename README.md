@@ -1,6 +1,6 @@
 # RiceHub Waitlist API
 
-REST API for the RiceHub waitlist website. Built with Gin web framework.
+REST API for the [waitlist](https://github.com/ricehub-io/waitlist) frontend. Built with Gin web framework.
 
 ## Requirements
 
@@ -28,6 +28,10 @@ REST API for the RiceHub waitlist website. Built with Gin web framework.
    ```
 
    By default, you can access the API on http://127.0.0.1:3000.
+
+## API documentation
+
+Once the server is running, the Swagger UI is available at [/swagger/index.html](http://127.0.0.1:3000/swagger/index.html).
 
 ## Building
 
