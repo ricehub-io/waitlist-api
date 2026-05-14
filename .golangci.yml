@@ -1,0 +1,31 @@
+version: "2"
+
+linters:
+  enable:
+    - govet
+    - gosec
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+    - misspell
+    - gocritic
+    - bodyclose
+    - noctx
+
+  settings:
+    gosec:
+      severity: medium
+
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/ricehub-io/waitlist-api
+
+run:
+  timeout: 5m
+  tests: false
+  modules-download-mode: readonly

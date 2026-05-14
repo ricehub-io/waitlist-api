@@ -23,30 +23,9 @@ jobs:
           cache: true
       - run: go mod download
 
-  format:
+  quality:
     needs: setup
-    name: Formatting
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Run goimports
-        run: |
-          go install golang.org/x/tools/cmd/goimports@v0.45.0
-          files=$(goimports -l .)
-          if [ -n "$files" ]; then
-            echo "These files have incorrect imports:"
-            echo "$files"
-            exit 1
-          fi
-
-  lint:
-    needs: setup
-    name: Linting
+    name: Linting and formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -60,9 +39,9 @@ jobs:
         with:
           version: v2.11.4
 
-  security:
+  vuln:
     needs: setup
-    name: Security scanning
+    name: Vulnerability scanning
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -88,10 +67,10 @@ jobs:
           cache: true
 
       - name: Run go test
-        run: go test -race ./...
+        run: go test -shuffle=on -timeout=5m -race ./...
 
   deploy:
-    needs: [format, lint, security, test]
+    needs: [quality, vuln, test]
     name: Deploying
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
