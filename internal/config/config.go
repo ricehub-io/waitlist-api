@@ -1,6 +1,8 @@
-package main
+package config
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -21,12 +23,17 @@ type Config struct {
 	RateLimitBurst     int
 }
 
-// NewConfig loads .env file and parses it into new config struct.
-// Returns error if file could not be loaded.
+// NewConfig tries to load .env file in the working directory and parse it into
+// new Config struct.
+// Returns error if file could not be loaded (but not if it's missing!).
 // Exits if any required environment variable is missing.
 func NewConfig() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
-		return nil, err
+		// unaimeds: if .env file could not be found we assume that user
+		// sets the variables themselves somewhere else.
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("loading .env file: %w", err)
+		}
 	}
 
 	return &Config{

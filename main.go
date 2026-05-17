@@ -3,23 +3,24 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "github.com/ricehub-io/waitlist-api/docs"
+	"github.com/ricehub-io/waitlist-api/internal/config"
+	"github.com/ricehub-io/waitlist-api/internal/db"
+	"github.com/ricehub-io/waitlist-api/internal/handlers"
+	"github.com/ricehub-io/waitlist-api/internal/middlewares"
+	"github.com/ricehub-io/waitlist-api/internal/storage"
 )
 
 // @title RiceHub Waitlist API
-// @version 1.4.0
-// @description API for RiceHub waitlist frontend.
+// @version 1.5.0
+// @description REST API for RiceHub waitlist frontend.
 
 // @host 127.0.0.1:3000
 // @BasePath /
@@ -30,33 +31,33 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("server run failed: %v", err)
 	}
 }
 
 func run() error {
-	if err := initCustomValidation(); err != nil {
-		return fmt.Errorf("init custom validation: %w", err)
+	if err := handlers.InitCustomValidation(); err != nil {
+		return fmt.Errorf("initializing custom validation: %w", err)
 	}
 
-	cfg, err := NewConfig()
+	cfg, err := config.NewConfig()
 	if err != nil {
 		return fmt.Errorf("new config: %w", err)
 	}
 
-	db, err := NewDatabase(cfg.DatabaseURL)
+	db, err := db.NewDatabase(cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("new database: %w", err)
 	}
 	defer db.Close()
 
-	storage, err := NewStorage(cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3BaseURL)
+	storage, err := storage.NewStorage(cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3BaseURL)
 	if err != nil {
 		return fmt.Errorf("new storage: %w", err)
 	}
 
-	h := NewHandler(cfg, db, storage)
-	limiter := NewIPRateLimiter(cfg.RateLimitPerMinute, cfg.RateLimitBurst, time.Hour)
+	h := handlers.NewHandler(cfg, db, storage)
+	limiter := middlewares.NewIPRateLimiter(cfg.RateLimitPerMinute, cfg.RateLimitBurst, time.Hour)
 
 	r, err := newRouter(cfg, h, limiter)
 	if err != nil {
@@ -64,16 +65,20 @@ func run() error {
 	}
 
 	if err := r.Run(":" + cfg.Port); err != nil {
-		return fmt.Errorf("gin run: %w", err)
+		return fmt.Errorf("running gin router: %w", err)
 	}
 
 	return nil
 }
 
-func newRouter(cfg *Config, h *Handler, limiter *IPRateLimiter) (*gin.Engine, error) {
+func newRouter(
+	cfg *config.Config,
+	h *handlers.Handler,
+	limiter *middlewares.IPRateLimiter,
+) (*gin.Engine, error) {
 	r := gin.Default()
 	if err := r.SetTrustedProxies(nil); err != nil {
-		return nil, fmt.Errorf("gin set trusted proxies: %w", err)
+		return nil, fmt.Errorf("setting trusted proxies: %w", err)
 	}
 
 	r.Use(cors.New(cors.Config{
@@ -82,7 +87,7 @@ func newRouter(cfg *Config, h *Handler, limiter *IPRateLimiter) (*gin.Engine, er
 		AllowHeaders: []string{"Origin", "Content-Type"},
 	}))
 
-	rl := RateLimitMiddleware(limiter)
+	rl := middlewares.RateLimitMiddleware(limiter)
 
 	wr := r.Group("/waitlist")
 	wr.GET("", h.GetWaitlistEmailCount)
@@ -94,7 +99,7 @@ func newRouter(cfg *Config, h *Handler, limiter *IPRateLimiter) (*gin.Engine, er
 
 	rr := r.Group("/rices")
 	rr.GET("", h.GetPreviewRices)
-	rr.POST("", adminMiddleware(cfg.AdminSecret), h.CreatePreviewRice)
+	rr.POST("", middlewares.AdminMiddleware(cfg.AdminSecret), h.CreatePreviewRice)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(
 		swaggerFiles.Handler,
@@ -102,30 +107,4 @@ func newRouter(cfg *Config, h *Handler, limiter *IPRateLimiter) (*gin.Engine, er
 	))
 
 	return r, nil
-}
-
-func initCustomValidation() error {
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		if err := v.RegisterValidation("ricetitle", func(fl validator.FieldLevel) bool {
-			re := regexp.MustCompile(`^[a-zA-Z0-9 '_-]+$`)
-			return re.MatchString(fl.Field().String())
-		}); err != nil {
-			return fmt.Errorf("ricetitle validation: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func adminMiddleware(adminSecret string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		secret := c.GetHeader("X-Admin-Secret")
-		if secret == "" || secret != adminSecret {
-			c.JSON(http.StatusUnauthorized, gin.H{"errors": []string{"unauthorized"}})
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
 }

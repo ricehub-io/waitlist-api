@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"bytes"
@@ -203,7 +203,7 @@ func TestCreateWaitlistEmail_HappyPath(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	var count int
-	err := testDB.pool.QueryRow(
+	err := testDB.Pool().QueryRow(
 		context.Background(),
 		"SELECT COUNT(*) FROM waitlist_emails WHERE email = 'alice@example.com'",
 	).Scan(&count)
@@ -253,7 +253,7 @@ func TestGetFoundingCreatorStats_Default(t *testing.T) {
 
 func TestGetFoundingCreatorStats_SomeTaken(t *testing.T) {
 	resetDB(t)
-	_, err := testDB.pool.Exec(
+	_, err := testDB.Pool().Exec(
 		context.Background(),
 		"UPDATE settings SET slots_taken = 3 WHERE id = 1",
 	)
@@ -267,7 +267,7 @@ func TestGetFoundingCreatorStats_SomeTaken(t *testing.T) {
 
 func TestGetFoundingCreatorStats_Full(t *testing.T) {
 	resetDB(t)
-	_, err := testDB.pool.Exec(
+	_, err := testDB.Pool().Exec(
 		context.Background(),
 		"UPDATE settings SET slots_taken = 10 WHERE id = 1",
 	)
@@ -288,7 +288,7 @@ func TestCreateFoundingCreator_HappyPath(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	var count int
-	err := testDB.pool.QueryRow(
+	err := testDB.Pool().QueryRow(
 		context.Background(),
 		"SELECT COUNT(*) FROM founder_applicants WHERE username = 'alice'",
 	).Scan(&count)
@@ -470,7 +470,7 @@ func TestCreatePreviewRice_HappyPath(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	var count int
-	err := testDB.pool.QueryRow(
+	err := testDB.Pool().QueryRow(
 		context.Background(),
 		"SELECT COUNT(*) FROM preview_rices WHERE title = 'My Rice'",
 	).Scan(&count)
@@ -490,7 +490,7 @@ func TestCreatePreviewRice_HappyPathWithPriceAndTags(t *testing.T) {
 
 	var price float64
 	var tags []string
-	err := testDB.pool.QueryRow(
+	err := testDB.Pool().QueryRow(
 		context.Background(),
 		"SELECT price, tags FROM preview_rices WHERE title = 'Paid Rice'",
 	).Scan(&price, &tags)

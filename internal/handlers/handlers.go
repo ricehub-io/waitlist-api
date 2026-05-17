@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"errors"
@@ -17,6 +17,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/ricehub-io/waitlist-api/internal/config"
+	"github.com/ricehub-io/waitlist-api/internal/db"
+	"github.com/ricehub-io/waitlist-api/internal/models"
+	"github.com/ricehub-io/waitlist-api/internal/storage"
 )
 
 var allowedImgExt = map[string]struct{}{
@@ -26,13 +31,17 @@ var allowedImgExt = map[string]struct{}{
 }
 
 type Handler struct {
-	cfg     *Config
-	db      *Database
-	storage Storer
+	cfg     *config.Config
+	db      *db.Database
+	storage storage.Storer
 }
 
 // NewHandler instantiates HTTP handler with given DB wrapper instance.
-func NewHandler(cfg *Config, db *Database, storage Storer) *Handler {
+func NewHandler(
+	cfg *config.Config,
+	db *db.Database,
+	storage storage.Storer,
+) *Handler {
 	return &Handler{cfg, db, storage}
 }
 
@@ -41,7 +50,7 @@ func NewHandler(cfg *Config, db *Database, storage Storer) *Handler {
 // @Description Returns a list of all preview rices ordered by creation date
 // @Tags rices
 // @Produce json
-// @Success 200 {array} GetPreviewRicesResponse
+// @Success 200 {array} models.GetPreviewRicesResponse
 // @Failure 500 {object} APIError "Internal server error"
 // @Router /rices [get]
 func (h *Handler) GetPreviewRices(c *gin.Context) {
@@ -61,7 +70,7 @@ func (h *Handler) GetPreviewRices(c *gin.Context) {
 // @Description Returns total count
 // @Tags waitlist
 // @Produce json
-// @Success 200 {object} GetWaitlistEmailCountResponse
+// @Success 200 {object} models.GetWaitlistEmailCountResponse
 // @Failure 500 {object} APIError "Internal server error"
 // @Router /waitlist [get]
 func (h *Handler) GetWaitlistEmailCount(c *gin.Context) {
@@ -72,7 +81,7 @@ func (h *Handler) GetWaitlistEmailCount(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, GetWaitlistEmailCountResponse{count})
+	c.JSON(http.StatusOK, models.GetWaitlistEmailCountResponse{Count: count})
 }
 
 // CreateWaitlistEmail godoc
@@ -88,7 +97,7 @@ func (h *Handler) GetWaitlistEmailCount(c *gin.Context) {
 // @Failure 500 {object} APIError "Internal server error"
 // @Router /waitlist [post]
 func (h *Handler) CreateWaitlistEmail(c *gin.Context) {
-	var body CreateWaitlistEmailRequest
+	var body models.CreateWaitlistEmailRequest
 	if err := c.ShouldBind(&body); err != nil {
 		sendErrors(c, http.StatusBadRequest, "could not parse request body", err.Error())
 		return
@@ -119,7 +128,7 @@ func (h *Handler) CreateWaitlistEmail(c *gin.Context) {
 // @Description Returns total, taken, and available founding creator slots
 // @Tags founders
 // @Produce json
-// @Success 200 {object} GetFoundingCreatorStatsResponse
+// @Success 200 {object} models.GetFoundingCreatorStatsResponse
 // @Failure 500 {object} APIError "Internal server error"
 // @Router /founders [get]
 func (h *Handler) GetFoundingCreatorStats(c *gin.Context) {
@@ -130,7 +139,7 @@ func (h *Handler) GetFoundingCreatorStats(c *gin.Context) {
 		return
 	}
 
-	dto := GetFoundingCreatorStatsResponse{
+	dto := models.GetFoundingCreatorStatsResponse{
 		SlotsTotal:     stats.SlotsTotal,
 		SlotsTaken:     stats.SlotsTaken,
 		SlotsAvailable: stats.SlotsTotal - stats.SlotsTaken,
@@ -154,7 +163,7 @@ func (h *Handler) GetFoundingCreatorStats(c *gin.Context) {
 // @Failure 500 {object} APIError "Internal server error"
 // @Router /founders [post]
 func (h *Handler) CreateFoundingCreator(c *gin.Context) {
-	var body CreateFoundingCreatorRequest
+	var body models.CreateFoundingCreatorRequest
 	if err := c.ShouldBind(&body); err != nil {
 		sendErrors(c, http.StatusBadRequest, "could not parse request body", err.Error())
 		return
@@ -211,7 +220,7 @@ func (h *Handler) CreateFoundingCreator(c *gin.Context) {
 // @Security AdminSecret
 // @Router /rices [post]
 func (h *Handler) CreatePreviewRice(c *gin.Context) {
-	var body CreatePreviewRiceRequest
+	var body models.CreatePreviewRiceRequest
 	if err := c.ShouldBind(&body); err != nil {
 		sendErrors(c, http.StatusBadRequest, "could not parse request body", err.Error())
 		return

@@ -1,13 +1,13 @@
 basePath: /
 definitions:
-  main.APIError:
+  handlers.APIError:
     properties:
       errors:
         items:
           type: string
         type: array
     type: object
-  main.GetFoundingCreatorStatsResponse:
+  models.GetFoundingCreatorStatsResponse:
     properties:
       slotsAvailable:
         type: integer
@@ -16,7 +16,7 @@ definitions:
       slotsTotal:
         type: integer
     type: object
-  main.GetPreviewRicesResponse:
+  models.GetPreviewRicesResponse:
     properties:
       downloadCount:
         type: integer
@@ -35,7 +35,7 @@ definitions:
       title:
         type: string
     type: object
-  main.GetWaitlistEmailCountResponse:
+  models.GetWaitlistEmailCountResponse:
     properties:
       count:
         type: integer
@@ -43,9 +43,9 @@ definitions:
 host: 127.0.0.1:3000
 info:
   contact: {}
-  description: API for RiceHub waitlist frontend.
+  description: REST API for RiceHub waitlist frontend.
   title: RiceHub Waitlist API
-  version: 1.2.0
+  version: 1.5.0
 paths:
   /founders:
     get:
@@ -56,11 +56,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.GetFoundingCreatorStatsResponse'
+            $ref: '#/definitions/models.GetFoundingCreatorStatsResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
       summary: Get founding creator slot statistics
       tags:
       - founders
@@ -92,15 +92,15 @@ paths:
         "400":
           description: Bad request
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
         "409":
           description: Username or email already taken
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
       summary: Register as founding creator
       tags:
       - founders
@@ -114,12 +114,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/main.GetPreviewRicesResponse'
+              $ref: '#/definitions/models.GetPreviewRicesResponse'
             type: array
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
       summary: Get all preview rices
       tags:
       - rices
@@ -172,19 +172,19 @@ paths:
         "400":
           description: Bad request
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
         "409":
           description: Title already exists
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
       security:
       - AdminSecret: []
       summary: Create a preview rice
@@ -199,11 +199,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.GetWaitlistEmailCountResponse'
+            $ref: '#/definitions/models.GetWaitlistEmailCountResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
       summary: Get amount of users in waitlist
       tags:
       - waitlist
@@ -225,15 +225,15 @@ paths:
         "400":
           description: Bad request
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
         "409":
           description: Email already on waitlist
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.APIError'
+            $ref: '#/definitions/handlers.APIError'
       summary: Add email to waitlist
       tags:
       - waitlist

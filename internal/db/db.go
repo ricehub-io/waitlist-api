@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/ricehub-io/waitlist-api/internal/models"
 )
 
 type Database struct {
@@ -29,6 +31,10 @@ func NewDatabase(url string) (*Database, error) {
 // Close closes all database connections and internal pool. (Blocking)
 func (db *Database) Close() {
 	db.pool.Close()
+}
+
+func (db *Database) Pool() *pgxpool.Pool {
+	return db.pool
 }
 
 func (db *Database) InsertWaitlistEmail(ctx context.Context, email string) error {
@@ -55,16 +61,16 @@ func (db *Database) InsertFoundingApplicant(
 	return nil
 }
 
-func (db *Database) FetchSlotStats(ctx context.Context) (SlotStats, error) {
+func (db *Database) FetchSlotStats(ctx context.Context) (models.SlotStats, error) {
 	const query = "SELECT slots_total, slots_taken FROM settings LIMIT 1"
-	s, err := rowToStruct[SlotStats](ctx, db.pool, query)
+	s, err := rowToStruct[models.SlotStats](ctx, db.pool, query)
 	if err != nil {
 		return s, fmt.Errorf("fetch slot stats: %w", err)
 	}
 	return s, nil
 }
 
-func (db *Database) FetchPreviewRices(ctx context.Context) (PreviewRices, error) {
+func (db *Database) FetchPreviewRices(ctx context.Context) (models.PreviewRices, error) {
 	const query = `
 	SELECT id, title, price, thumbnail_path, download_count, star_count, tags, created_at
 	FROM preview_rices
@@ -75,7 +81,7 @@ func (db *Database) FetchPreviewRices(ctx context.Context) (PreviewRices, error)
 		return nil, fmt.Errorf("fetch preview rices: %w", err)
 	}
 
-	rices, err := pgx.CollectRows(rows, pgx.RowToStructByName[PreviewRice])
+	rices, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.PreviewRice])
 	if err != nil {
 		return nil, fmt.Errorf("fetch preview rices: %w", err)
 	}

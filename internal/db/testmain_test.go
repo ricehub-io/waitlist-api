@@ -1,49 +1,23 @@
-package main
+package db
 
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sort"
 	"testing"
-	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-var (
-	testDB     *Database
-	testServer *httptest.Server
-)
-
-type mockStorer struct{}
-
-func (m *mockStorer) UploadFile(_ context.Context, _, _ string, _ io.Reader, _ string) error {
-	return nil
-}
-
-var testCfg = &Config{
-	S3BaseURL:     "http://localhost",
-	S3MediaBucket: "test-bucket",
-	CORSOrigin:    "http://localhost",
-	AdminSecret:   "test-admin-secret",
-}
+var testDB *Database
 
 func TestMain(m *testing.M) {
-	gin.SetMode(gin.TestMode)
-
 	ctx := context.Background()
-
-	if err := initCustomValidation(); err != nil {
-		panic("init custom validation: " + err.Error())
-	}
 
 	ctr, err := tcpostgres.Run(ctx, "postgres:16-alpine",
 		tcpostgres.WithDatabase("ricehub_test"),
@@ -69,23 +43,14 @@ func TestMain(m *testing.M) {
 	}
 	defer testDB.Close()
 
-	if err := applyMigrations(ctx, testDB, "migrations"); err != nil {
+	if err := applyMigrations(ctx, testDB, "../../migrations"); err != nil {
 		panic("apply migrations: " + err.Error())
 	}
-
-	h := NewHandler(testCfg, testDB, &mockStorer{})
-	limiter := NewIPRateLimiter(100, 100, time.Hour)
-	r, err := newRouter(testCfg, h, limiter)
-	if err != nil {
-		panic("new router: " + err.Error())
-	}
-	testServer = httptest.NewServer(r)
-	defer testServer.Close()
 
 	os.Exit(m.Run())
 }
 
-func applyMigrations(ctx context.Context, db *Database, dir string) error {
+func applyMigrations(ctx context.Context, database *Database, dir string) error {
 	entries, err := filepath.Glob(filepath.Join(dir, "*.sql"))
 	if err != nil {
 		return err
@@ -96,7 +61,7 @@ func applyMigrations(ctx context.Context, db *Database, dir string) error {
 		if err != nil {
 			return err
 		}
-		if _, err := db.pool.Exec(ctx, string(sql)); err != nil {
+		if _, err := database.pool.Exec(ctx, string(sql)); err != nil {
 			return fmt.Errorf("migration %s: %w", path, err)
 		}
 	}

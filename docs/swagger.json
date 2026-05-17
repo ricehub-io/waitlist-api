@@ -1,10 +1,10 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "API for RiceHub waitlist frontend.",
+        "description": "REST API for RiceHub waitlist frontend.",
         "title": "RiceHub Waitlist API",
         "contact": {},
-        "version": "1.2.0"
+        "version": "1.5.0"
     },
     "host": "127.0.0.1:3000",
     "basePath": "/",
@@ -23,13 +23,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.GetFoundingCreatorStatsResponse"
+                            "$ref": "#/definitions/models.GetFoundingCreatorStatsResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     }
                 }
@@ -76,19 +76,19 @@
                     "400": {
                         "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     },
                     "409": {
                         "description": "Username or email already taken",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     }
                 }
@@ -110,14 +110,14 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/main.GetPreviewRicesResponse"
+                                "$ref": "#/definitions/models.GetPreviewRicesResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     }
                 }
@@ -199,25 +199,25 @@
                     "400": {
                         "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     },
                     "409": {
                         "description": "Title already exists",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     }
                 }
@@ -237,13 +237,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.GetWaitlistEmailCountResponse"
+                            "$ref": "#/definitions/models.GetWaitlistEmailCountResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     }
                 }
@@ -276,19 +276,19 @@
                     "400": {
                         "description": "Bad request",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     },
                     "409": {
                         "description": "Email already on waitlist",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.APIError"
+                            "$ref": "#/definitions/handlers.APIError"
                         }
                     }
                 }
@@ -296,7 +296,7 @@
         }
     },
     "definitions": {
-        "main.APIError": {
+        "handlers.APIError": {
             "type": "object",
             "properties": {
                 "errors": {
@@ -307,7 +307,7 @@
                 }
             }
         },
-        "main.GetFoundingCreatorStatsResponse": {
+        "models.GetFoundingCreatorStatsResponse": {
             "type": "object",
             "properties": {
                 "slotsAvailable": {
@@ -321,7 +321,7 @@
                 }
             }
         },
-        "main.GetPreviewRicesResponse": {
+        "models.GetPreviewRicesResponse": {
             "type": "object",
             "properties": {
                 "downloadCount": {
@@ -350,7 +350,7 @@
                 }
             }
         },
-        "main.GetWaitlistEmailCountResponse": {
+        "models.GetWaitlistEmailCountResponse": {
             "type": "object",
             "properties": {
                 "count": {
