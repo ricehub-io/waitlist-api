@@ -8,7 +8,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
 type Config struct {
 	Port               string
 	DatabaseURL        string
