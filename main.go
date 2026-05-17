@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,7 @@ import (
 )
 
 // @title RiceHub Waitlist API
-// @version 1.3.0
+// @version 1.4.0
 // @description API for RiceHub waitlist frontend.
 
 // @host 127.0.0.1:3000
@@ -55,8 +56,9 @@ func run() error {
 	}
 
 	h := NewHandler(cfg, db, storage)
+	limiter := NewIPRateLimiter(cfg.RateLimitPerMinute, cfg.RateLimitBurst, time.Hour)
 
-	r, err := newRouter(cfg, h)
+	r, err := newRouter(cfg, h, limiter)
 	if err != nil {
 		return err
 	}
@@ -68,7 +70,7 @@ func run() error {
 	return nil
 }
 
-func newRouter(cfg *Config, h *Handler) (*gin.Engine, error) {
+func newRouter(cfg *Config, h *Handler, limiter *IPRateLimiter) (*gin.Engine, error) {
 	r := gin.Default()
 	if err := r.SetTrustedProxies(nil); err != nil {
 		return nil, fmt.Errorf("gin set trusted proxies: %w", err)
@@ -80,13 +82,15 @@ func newRouter(cfg *Config, h *Handler) (*gin.Engine, error) {
 		AllowHeaders: []string{"Origin", "Content-Type"},
 	}))
 
+	rl := RateLimitMiddleware(limiter)
+
 	wr := r.Group("/waitlist")
 	wr.GET("", h.GetWaitlistEmailCount)
-	wr.POST("", h.CreateWaitlistEmail)
+	wr.POST("", rl, h.CreateWaitlistEmail)
 
 	fr := r.Group("/founders")
 	fr.GET("", h.GetFoundingCreatorStats)
-	fr.POST("", h.CreateFoundingCreator)
+	fr.POST("", rl, h.CreateFoundingCreator)
 
 	rr := r.Group("/rices")
 	rr.GET("", h.GetPreviewRices)

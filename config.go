@@ -3,19 +3,23 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
+
 type Config struct {
-	Port          string
-	DatabaseURL   string
-	CORSOrigin    string
-	S3BaseURL     string
-	S3MediaBucket string
-	S3AccessKey   string
-	S3SecretKey   string
-	AdminSecret   string
+	Port               string
+	DatabaseURL        string
+	CORSOrigin         string
+	S3BaseURL          string
+	S3MediaBucket      string
+	S3AccessKey        string
+	S3SecretKey        string
+	AdminSecret        string
+	RateLimitPerMinute int
+	RateLimitBurst     int
 }
 
 // NewConfig loads .env file and parses it into new config struct.
@@ -27,14 +31,16 @@ func NewConfig() (*Config, error) {
 	}
 
 	return &Config{
-		Port:          getOptEnv("PORT", "3000"),
-		DatabaseURL:   getEnv("DATABASE_URL"),
-		CORSOrigin:    getOptEnv("CORS_ORIGIN", "http://127.0.0.1:5173"),
-		S3BaseURL:     getEnv("S3_BASE_URL"),
-		S3MediaBucket: getEnv("S3_MEDIA_BUCKET"),
-		S3AccessKey:   getEnv("S3_ACCESS_KEY"),
-		S3SecretKey:   getEnv("S3_SECRET_KEY"),
-		AdminSecret:   getEnv("ADMIN_SECRET"),
+		Port:               getOptEnv("PORT", "3000"),
+		DatabaseURL:        getEnv("DATABASE_URL"),
+		CORSOrigin:         getOptEnv("CORS_ORIGIN", "http://127.0.0.1:5173"),
+		S3BaseURL:          getEnv("S3_BASE_URL"),
+		S3MediaBucket:      getEnv("S3_MEDIA_BUCKET"),
+		S3AccessKey:        getEnv("S3_ACCESS_KEY"),
+		S3SecretKey:        getEnv("S3_SECRET_KEY"),
+		AdminSecret:        getEnv("ADMIN_SECRET"),
+		RateLimitPerMinute: getOptEnvInt("RATE_LIMIT_PER_MINUTE", 5),
+		RateLimitBurst:     getOptEnvInt("RATE_LIMIT_BURST", 3),
 	}, nil
 }
 
@@ -53,6 +59,16 @@ func getEnv(key string) string {
 func getOptEnv(key, fallback string) string {
 	if val := os.Getenv(key); val != "" {
 		return val
+	}
+	return fallback
+}
+
+// getOptEnvInt fetches an integer environment variable defaulting to fallback if not set or invalid.
+func getOptEnvInt(key string, fallback int) int {
+	if val := os.Getenv(key); val != "" {
+		if n, err := strconv.Atoi(val); err == nil {
+			return n
+		}
 	}
 	return fallback
 }

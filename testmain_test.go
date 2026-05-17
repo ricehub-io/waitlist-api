@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -73,7 +74,8 @@ func TestMain(m *testing.M) {
 	}
 
 	h := NewHandler(testCfg, testDB, &mockStorer{})
-	r, err := newRouter(testCfg, h)
+	limiter := NewIPRateLimiter(100, 100, time.Hour)
+	r, err := newRouter(testCfg, h, limiter)
 	if err != nil {
 		panic("new router: " + err.Error())
 	}

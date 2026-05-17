@@ -94,6 +94,11 @@ func (h *Handler) CreateWaitlistEmail(c *gin.Context) {
 		return
 	}
 
+	if body.Website != "" {
+		c.Status(http.StatusCreated)
+		return
+	}
+
 	if err := h.db.InsertWaitlistEmail(c.Request.Context(), body.Email); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
@@ -152,6 +157,11 @@ func (h *Handler) CreateFoundingCreator(c *gin.Context) {
 	var body CreateFoundingCreatorRequest
 	if err := c.ShouldBind(&body); err != nil {
 		sendErrors(c, http.StatusBadRequest, "could not parse request body", err.Error())
+		return
+	}
+
+	if body.Website != "" {
+		c.Status(http.StatusCreated)
 		return
 	}
 
