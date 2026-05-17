@@ -7,7 +7,6 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -17,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"go.uber.org/zap"
 
 	"github.com/ricehub-io/waitlist-api/internal/config"
 	"github.com/ricehub-io/waitlist-api/internal/db"
@@ -31,6 +31,7 @@ var allowedImgExt = map[string]struct{}{
 }
 
 type Handler struct {
+	logger  *zap.Logger
 	cfg     *config.Config
 	db      *db.Database
 	storage storage.Storer
@@ -38,11 +39,12 @@ type Handler struct {
 
 // NewHandler instantiates HTTP handler with given DB wrapper instance.
 func NewHandler(
+	logger *zap.Logger,
 	cfg *config.Config,
 	db *db.Database,
 	storage storage.Storer,
 ) *Handler {
-	return &Handler{cfg, db, storage}
+	return &Handler{logger, cfg, db, storage}
 }
 
 // GetPreviewRices godoc
@@ -56,7 +58,7 @@ func NewHandler(
 func (h *Handler) GetPreviewRices(c *gin.Context) {
 	rices, err := h.db.FetchPreviewRices(c.Request.Context())
 	if err != nil {
-		log.Printf("could not fetch preview rices: %v", err)
+		h.logger.Error("Could not fetch preview rices", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -76,7 +78,7 @@ func (h *Handler) GetPreviewRices(c *gin.Context) {
 func (h *Handler) GetWaitlistEmailCount(c *gin.Context) {
 	count, err := h.db.WaitlistEmailCount(c.Request.Context())
 	if err != nil {
-		log.Printf("could not fetch waitlist email count: %v", err)
+		h.logger.Error("Could not fetch waitlist count", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -115,7 +117,7 @@ func (h *Handler) CreateWaitlistEmail(c *gin.Context) {
 			return
 		}
 
-		log.Printf("could not insert waitlist email: %v", err)
+		h.logger.Error("Could not insert waitlist email", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -134,7 +136,7 @@ func (h *Handler) CreateWaitlistEmail(c *gin.Context) {
 func (h *Handler) GetFoundingCreatorStats(c *gin.Context) {
 	stats, err := h.db.FetchSlotStats(c.Request.Context())
 	if err != nil {
-		log.Printf("could not fetch slot stats: %v", err)
+		h.logger.Error("Could not fetch slot stats", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -191,7 +193,7 @@ func (h *Handler) CreateFoundingCreator(c *gin.Context) {
 			return
 		}
 
-		log.Printf("could not insert founding applicant: %v", err)
+		h.logger.Error("Could not insert founding applicant", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -239,7 +241,7 @@ func (h *Handler) CreatePreviewRice(c *gin.Context) {
 	thumbnailKey := fmt.Sprintf("thumbnails/%s.webp", uuid.New())
 	f, err := openThumbnail(mime, body.Thumbnail)
 	if err != nil {
-		log.Printf("could not open thumbnail file: %v", err)
+		h.logger.Error("Could not open thumbnail file", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -249,7 +251,7 @@ func (h *Handler) CreatePreviewRice(c *gin.Context) {
 		c.Request.Context(),
 		h.cfg.S3MediaBucket, thumbnailKey, f, "image/webp",
 	); err != nil {
-		log.Printf("could not upload thumbnail: %v", err)
+		h.logger.Error("Could not upload thumbnail", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -264,7 +266,8 @@ func (h *Handler) CreatePreviewRice(c *gin.Context) {
 			sendErrors(c, http.StatusConflict, "a rice with this title already exists!")
 			return
 		}
-		log.Printf("could not insert preview rice: %v", err)
+
+		h.logger.Error("Could not insert preview rice", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}

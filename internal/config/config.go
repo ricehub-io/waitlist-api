@@ -11,6 +11,7 @@ import (
 )
 
 type Config struct {
+	Env                string
 	Port               string
 	DatabaseURL        string
 	CORSOrigin         string
@@ -36,7 +37,13 @@ func NewConfig() (*Config, error) {
 		}
 	}
 
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		env = getOptEnv("DOPPLER_ENVIRONMENT", "dev")
+	}
+
 	return &Config{
+		Env:                env,
 		Port:               getOptEnv("PORT", "3000"),
 		DatabaseURL:        getEnv("DATABASE_URL"),
 		CORSOrigin:         getOptEnv("CORS_ORIGIN", "http://127.0.0.1:5173"),

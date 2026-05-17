@@ -17,6 +17,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.uber.org/zap"
 
 	"github.com/ricehub-io/waitlist-api/internal/config"
 	"github.com/ricehub-io/waitlist-api/internal/db"
@@ -78,7 +79,7 @@ func TestMain(m *testing.M) {
 		panic("apply migrations: " + err.Error())
 	}
 
-	h := NewHandler(testCfg, testDB, &mockStorer{})
+	h := NewHandler(zap.NewNop(), testCfg, testDB, &mockStorer{})
 	limiter := middlewares.NewIPRateLimiter(100, 100, time.Hour)
 	r := buildTestRouter(testCfg, h, limiter)
 	testServer = httptest.NewServer(r)

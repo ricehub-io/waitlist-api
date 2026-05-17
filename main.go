@@ -6,9 +6,13 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
+
+	"github.com/ricehub-io/waitlist-api/internal/logger"
 
 	_ "github.com/ricehub-io/waitlist-api/docs"
 	"github.com/ricehub-io/waitlist-api/internal/config"
@@ -19,7 +23,7 @@ import (
 )
 
 // @title RiceHub Waitlist API
-// @version 1.5.0
+// @version 1.6.0
 // @description REST API for RiceHub waitlist frontend.
 
 // @host 127.0.0.1:3000
@@ -36,6 +40,9 @@ func main() {
 }
 
 func run() error {
+	l := logger.Init(zap.InfoLevel)
+	defer logger.Sync(l)
+
 	if err := handlers.InitCustomValidation(); err != nil {
 		return fmt.Errorf("initializing custom validation: %w", err)
 	}
@@ -56,10 +63,10 @@ func run() error {
 		return fmt.Errorf("new storage: %w", err)
 	}
 
-	h := handlers.NewHandler(cfg, db, storage)
+	h := handlers.NewHandler(l, cfg, db, storage)
 	limiter := middlewares.NewIPRateLimiter(cfg.RateLimitPerMinute, cfg.RateLimitBurst, time.Hour)
 
-	r, err := newRouter(cfg, h, limiter)
+	r, err := newRouter(l, cfg, h, limiter)
 	if err != nil {
 		return err
 	}
@@ -72,20 +79,29 @@ func run() error {
 }
 
 func newRouter(
+	l *zap.Logger,
 	cfg *config.Config,
 	h *handlers.Handler,
 	limiter *middlewares.IPRateLimiter,
 ) (*gin.Engine, error) {
-	r := gin.Default()
+	if cfg.Env == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	r := gin.New()
 	if err := r.SetTrustedProxies(nil); err != nil {
 		return nil, fmt.Errorf("setting trusted proxies: %w", err)
 	}
 
-	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{cfg.CORSOrigin},
-		AllowMethods: []string{"GET", "POST"},
-		AllowHeaders: []string{"Origin", "Content-Type"},
-	}))
+	r.Use(
+		ginzap.RecoveryWithZap(l, true),
+		ginzap.Ginzap(l, time.RFC3339, true),
+		cors.New(cors.Config{
+			AllowOrigins: []string{cfg.CORSOrigin},
+			AllowMethods: []string{"GET", "POST"},
+			AllowHeaders: []string{"Origin", "Content-Type"},
+		}),
+	)
 
 	rl := middlewares.RateLimitMiddleware(limiter)
 
