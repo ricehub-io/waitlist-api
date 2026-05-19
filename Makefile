@@ -16,23 +16,23 @@ build:
 run:
 	go run $(CMD)
 
-## fmt: checks if all files are compliant with goimports' formatting
+## fmt: run formatters
 fmt:
-	golangci-lint fmt --diff ./...
+	golangci-lint fmt --diff-colored
 
-## lint: run golangci-lint
+## lint: run linters
 lint:
-	golangci-lint run ./...
+	golangci-lint run
 
 ## vuln: run govulncheck
 vuln:
 	govulncheck ./...
 
-## test: run integration and unit tests (requires Docker)
+## test: run tests
 test:
 	go test -race -shuffle=on -timeout=5m ./...
 
-## check: run fmt, lint, vuln, and tests
+## check: run fmt, lint, vuln, and test
 check: fmt lint vuln test
 
 ## swagger: generate swagger docs from annotations

@@ -1,87 +1,56 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
+	"github.com/sethvargo/go-envconfig"
 )
 
 type Config struct {
-	Env                string
-	Port               string
-	DatabaseURL        string
-	CORSOrigin         string
-	S3BaseURL          string
-	S3MediaBucket      string
-	S3AccessKey        string
-	S3SecretKey        string
-	AdminSecret        string
-	RateLimitPerMinute int
-	RateLimitBurst     int
+	Environment        string `env:"ENVIRONMENT, default=dev"`
+	BindAddress        string `env:"BIND_ADDRESS, default=127.0.0.1:3000"`
+	DatabaseURL        string `env:"DATABASE_URL, required"`
+	CORSOrigin         string `env:"CORS_ORIGIN"`
+	S3BaseURL          string `env:"S3_BASE_URL, required"`
+	S3MediaBucket      string `env:"S3_MEDIA_BUCKET, required"`
+	S3AccessKey        string `env:"S3_ACCESS_KEY, required"`
+	S3SecretKey        string `env:"S3_SECRET_KEY, required"`
+	AdminSecret        string `env:"ADMIN_SECRET, required"`
+	RateLimitPerMinute int    `env:"RATE_LIMIT_PER_MINUTE, default=5"`
+	RateLimitBurst     int    `env:"RATE_LIMIT_BURST, default=3"`
+	DiscordWebhookURL  string `env:"DISCORD_WEBHOOK_URL"`
 }
 
-// NewConfig tries to load .env file in the working directory and parse it into
-// new Config struct.
-// Returns error if file could not be loaded (but not if it's missing!).
-// Exits if any required environment variable is missing.
-func NewConfig() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		// unaimeds: if .env file could not be found we assume that user
-		// sets the variables themselves somewhere else.
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("loading .env file: %w", err)
+// NewConfig tries to load .env file in current working directory and parse it into a config struct.
+// Returns error if file or variable could not be parsed.
+func NewConfig(ctx context.Context) (*Config, error) {
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("loading env file: %w", err)
+	}
+
+	if env := os.Getenv("ENVIRONMENT"); env == "" {
+		doppEnv := os.Getenv("DOPPLER_ENVIRONMENT")
+		if err := os.Setenv("ENVIRONMENT", doppEnv); err != nil {
+			return nil, fmt.Errorf("setting 'ENVIRONMENT' env variable: %w", err)
 		}
 	}
 
-	env := os.Getenv("ENVIRONMENT")
-	if env == "" {
-		env = getOptEnv("DOPPLER_ENVIRONMENT", "dev")
+	var c Config
+	if err := envconfig.Process(ctx, &c); err != nil {
+		return nil, fmt.Errorf("processing config: %w", err)
 	}
 
-	return &Config{
-		Env:                env,
-		Port:               getOptEnv("PORT", "3000"),
-		DatabaseURL:        getEnv("DATABASE_URL"),
-		CORSOrigin:         getOptEnv("CORS_ORIGIN", "http://127.0.0.1:5173"),
-		S3BaseURL:          getEnv("S3_BASE_URL"),
-		S3MediaBucket:      getEnv("S3_MEDIA_BUCKET"),
-		S3AccessKey:        getEnv("S3_ACCESS_KEY"),
-		S3SecretKey:        getEnv("S3_SECRET_KEY"),
-		AdminSecret:        getEnv("ADMIN_SECRET"),
-		RateLimitPerMinute: getOptEnvInt("RATE_LIMIT_PER_MINUTE", 5),
-		RateLimitBurst:     getOptEnvInt("RATE_LIMIT_BURST", 3),
-	}, nil
-}
-
-// getEnv fetches given environment variable, exiting if it's not set.
-//
-// Use it to get environment variables that are required and can't have a default value.
-func getEnv(key string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		log.Fatalf("required environment variable %s is not set", key)
+	if c.RateLimitBurst <= 0 {
+		return nil, fmt.Errorf("variable 'RATE_LIMIT_PER_MINUTE' must be greater than zero")
 	}
-	return val
-}
 
-// getOptEnv fetches an environment variable defaulting to given value if not set.
-func getOptEnv(key, fallback string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
+	if c.RateLimitBurst <= 0 {
+		return nil, fmt.Errorf("variable 'RATE_LIMIT_BURST' must be greater than zero")
 	}
-	return fallback
-}
 
-// getOptEnvInt fetches an integer environment variable defaulting to fallback if not set or invalid.
-func getOptEnvInt(key string, fallback int) int {
-	if val := os.Getenv(key); val != "" {
-		if n, err := strconv.Atoi(val); err == nil {
-			return n
-		}
-	}
-	return fallback
+	return &c, nil
 }

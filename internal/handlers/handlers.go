@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/jpeg" // init jpeg support
+	_ "image/png"  // init png support
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -20,6 +20,7 @@ import (
 
 	"github.com/ricehub-io/waitlist-api/internal/config"
 	"github.com/ricehub-io/waitlist-api/internal/db"
+	"github.com/ricehub-io/waitlist-api/internal/discord"
 	"github.com/ricehub-io/waitlist-api/internal/models"
 	"github.com/ricehub-io/waitlist-api/internal/storage"
 )
@@ -196,6 +197,16 @@ func (h *Handler) CreateFoundingCreator(c *gin.Context) {
 		h.logger.Error("Could not insert founding applicant", zap.Error(err))
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
+	}
+
+	if h.cfg.DiscordWebhookURL != "" {
+		if err := discord.SendWebhook(
+			c.Request.Context(),
+			h.cfg.DiscordWebhookURL,
+			"New founding creator application has been received! @everyone",
+		); err != nil {
+			h.logger.Error("Failed to send discord webhook", zap.Error(err))
+		}
 	}
 
 	c.Status(http.StatusCreated)

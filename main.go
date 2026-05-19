@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -23,7 +24,7 @@ import (
 )
 
 // @title RiceHub Waitlist API
-// @version 1.6.0
+// @version 1.7.0
 // @description REST API for RiceHub waitlist frontend.
 
 // @host 127.0.0.1:3000
@@ -35,11 +36,15 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("server run failed: %v", err)
+		log.Fatalf("run failed: %v", err)
 	}
 }
 
 func run() error {
+	// TODO: use signal and graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	l := logger.Init(zap.InfoLevel)
 	defer logger.Sync(l)
 
@@ -47,9 +52,19 @@ func run() error {
 		return fmt.Errorf("initializing custom validation: %w", err)
 	}
 
-	cfg, err := config.NewConfig()
+	cfg, err := config.NewConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("new config: %w", err)
+	}
+
+	if cfg.Environment == "prod" {
+		l.Info("Running in production mode")
+	} else {
+		l.Warn("Running in development mode")
+	}
+
+	if cfg.DiscordWebhookURL == "" {
+		l.Info("Discord notifications disabled")
 	}
 
 	db, err := db.NewDatabase(cfg.DatabaseURL)
@@ -71,7 +86,8 @@ func run() error {
 		return err
 	}
 
-	if err := r.Run(":" + cfg.Port); err != nil {
+	l.Sugar().Infof("Listening on %s", cfg.BindAddress)
+	if err := r.Run(cfg.BindAddress); err != nil {
 		return fmt.Errorf("running gin router: %w", err)
 	}
 
@@ -84,7 +100,7 @@ func newRouter(
 	h *handlers.Handler,
 	limiter *middlewares.IPRateLimiter,
 ) (*gin.Engine, error) {
-	if cfg.Env == "prod" {
+	if cfg.Environment == "prod" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -93,11 +109,18 @@ func newRouter(
 		return nil, fmt.Errorf("setting trusted proxies: %w", err)
 	}
 
+	allowOrigins := make([]string, 0, 1)
+	if cfg.CORSOrigin != "" {
+		allowOrigins = append(allowOrigins, cfg.CORSOrigin)
+	} else {
+		allowOrigins = append(allowOrigins, "*")
+	}
+
 	r.Use(
 		ginzap.RecoveryWithZap(l, true),
 		ginzap.Ginzap(l, time.RFC3339, true),
 		cors.New(cors.Config{
-			AllowOrigins: []string{cfg.CORSOrigin},
+			AllowOrigins: allowOrigins,
 			AllowMethods: []string{"GET", "POST"},
 			AllowHeaders: []string{"Origin", "Content-Type"},
 		}),

@@ -81,13 +81,19 @@ func TestInsertWaitlistEmail_DuplicateReturnsUniqueViolation(t *testing.T) {
 
 func TestInsertFoundingApplicant_Success(t *testing.T) {
 	resetDB(t)
-	err := testDB.InsertFoundingApplicant(context.Background(), "alice", "alice@x.com", "https://x.com")
+	err := testDB.InsertFoundingApplicant(
+		context.Background(),
+		"alice", "alice@x.com", "https://x.com",
+	)
 	require.NoError(t, err)
 }
 
 func TestInsertFoundingApplicant_DuplicateUsernameConstraintName(t *testing.T) {
 	resetDB(t)
-	require.NoError(t, testDB.InsertFoundingApplicant(context.Background(), "alice", "a@x.com", "https://x.com"))
+	require.NoError(t, testDB.InsertFoundingApplicant(
+		context.Background(),
+		"alice", "a@x.com", "https://x.com",
+	))
 
 	err := testDB.InsertFoundingApplicant(context.Background(), "alice", "b@y.com", "https://x.com")
 	require.Error(t, err)
@@ -101,7 +107,10 @@ func TestInsertFoundingApplicant_DuplicateUsernameConstraintName(t *testing.T) {
 
 func TestInsertFoundingApplicant_DuplicateEmailConstraintName(t *testing.T) {
 	resetDB(t)
-	require.NoError(t, testDB.InsertFoundingApplicant(context.Background(), "alice", "a@x.com", "https://x.com"))
+	require.NoError(t, testDB.InsertFoundingApplicant(
+		context.Background(),
+		"alice", "a@x.com", "https://x.com",
+	))
 
 	err := testDB.InsertFoundingApplicant(context.Background(), "bob", "a@x.com", "https://x.com")
 	require.Error(t, err)

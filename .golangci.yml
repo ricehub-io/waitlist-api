@@ -1,31 +1,75 @@
 version: "2"
 
 linters:
+  default: none
   enable:
-    - govet
-    - gosec
-    - errcheck
-    - staticcheck
-    - ineffassign
-    - unused
-    - misspell
-    - gocritic
+    - asciicheck
     - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - errorlint
+    - exhaustive
+    - funlen
+    - goconst
+    - gocritic
+    - gocyclo
+    - goheader
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nestif
     - noctx
-
+    - nolintlint
+    - prealloc
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
   settings:
-    gosec:
-      severity: medium
+    exhaustive:
+      check:
+        - map
+        - switch
+      default-signifies-exhaustive: true
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - noctx
+          - unparam
 
 formatters:
   enable:
     - goimports
+    - gofumpt
+    - golines
   settings:
     goimports:
       local-prefixes:
         - github.com/ricehub-io/waitlist-api
+    gofumpt:
+      module-path: github.com/ricehub-io/waitlist-api
+      extra-rules: true
+    golines:
+      max-len: 100
+      shorten-comments: true
 
 run:
   timeout: 5m
-  tests: false
   modules-download-mode: readonly

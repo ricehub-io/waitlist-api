@@ -99,7 +99,7 @@ jobs:
           target: ${{ secrets.CD_TARGET }}
           strip_components: 1
 
-      - name: Restart API service
+      - name: Restart systemd service
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}

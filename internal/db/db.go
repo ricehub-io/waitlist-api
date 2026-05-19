@@ -113,7 +113,7 @@ func (db *Database) WaitlistEmailCount(ctx context.Context) (count int, err erro
 	if err := db.pool.QueryRow(ctx, query).Scan(&count); err != nil {
 		return -1, fmt.Errorf("waitlist email count: %w", err)
 	}
-	return
+	return count, err
 }
 
 // -- HELPERS --

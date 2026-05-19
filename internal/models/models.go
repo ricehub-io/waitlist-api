@@ -75,7 +75,7 @@ type GetWaitlistEmailCountResponse struct {
 }
 
 type CreateWaitlistEmailRequest struct {
-	Email   string `form:"email" binding:"required,email"`
+	Email   string `form:"email"   binding:"required,email"`
 	Website string `form:"website"`
 }
 
@@ -86,17 +86,17 @@ type GetFoundingCreatorStatsResponse struct {
 }
 
 type CreateFoundingCreatorRequest struct {
-	Username    string `form:"username" binding:"required,min=4,max=14,alphanum"`
-	Email       string `form:"email" binding:"required,email"`
+	Username    string `form:"username"    binding:"required,min=4,max=14,alphanum"`
+	Email       string `form:"email"       binding:"required,email"`
 	DotfilesURL string `form:"dotfilesUrl" binding:"required,url"`
 	Website     string `form:"website"`
 }
 
 type CreatePreviewRiceRequest struct {
-	Title         string                `form:"title" binding:"required,min=4,max=32,ricetitle"`
-	Price         *float64              `form:"price" binding:"omitempty,gt=0"`
-	StarCount     int                   `form:"starCount" binding:"gte=0"`
+	Title         string                `form:"title"         binding:"required,min=4,max=32,ricetitle"`
+	Price         *float64              `form:"price"         binding:"omitempty,gt=0"`
+	StarCount     int                   `form:"starCount"     binding:"gte=0"`
 	DownloadCount int                   `form:"downloadCount" binding:"gte=0"`
-	Tags          []string              `form:"tags" binding:"required"`
-	Thumbnail     *multipart.FileHeader `form:"thumbnail" binding:"required"`
+	Tags          []string              `form:"tags"          binding:"required"`
+	Thumbnail     *multipart.FileHeader `form:"thumbnail"     binding:"required"`
 }

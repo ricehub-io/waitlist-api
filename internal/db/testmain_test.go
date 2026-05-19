@@ -17,6 +17,10 @@ import (
 var testDB *Database
 
 func TestMain(m *testing.M) {
+	os.Exit(runTests(m))
+}
+
+func runTests(m *testing.M) int {
 	ctx := context.Background()
 
 	ctr, err := tcpostgres.Run(ctx, "postgres:16-alpine",
@@ -47,7 +51,7 @@ func TestMain(m *testing.M) {
 		panic("apply migrations: " + err.Error())
 	}
 
-	os.Exit(m.Run())
+	return m.Run()
 }
 
 func applyMigrations(ctx context.Context, database *Database, dir string) error {
@@ -95,16 +99,6 @@ func seedPreviewRice(t *testing.T, title, thumbnailPath string, price *float64) 
 		context.Background(),
 		"INSERT INTO preview_rices (title, thumbnail_path, price) VALUES ($1, $2, $3)",
 		title, thumbnailPath, price,
-	)
-	require.NoError(t, err)
-}
-
-func seedFounder(t *testing.T, username, email, dotfilesURL string) {
-	t.Helper()
-	_, err := testDB.pool.Exec(
-		context.Background(),
-		"INSERT INTO founder_applicants (username, email, dotfiles_url) VALUES ($1, $2, $3)",
-		username, email, dotfilesURL,
 	)
 	require.NoError(t, err)
 }

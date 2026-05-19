@@ -43,6 +43,10 @@ var testCfg = &config.Config{
 }
 
 func TestMain(m *testing.M) {
+	os.Exit(runTests(m))
+}
+
+func runTests(m *testing.M) int {
 	gin.SetMode(gin.TestMode)
 
 	ctx := context.Background()
@@ -85,10 +89,14 @@ func TestMain(m *testing.M) {
 	testServer = httptest.NewServer(r)
 	defer testServer.Close()
 
-	os.Exit(m.Run())
+	return m.Run()
 }
 
-func buildTestRouter(cfg *config.Config, h *Handler, limiter *middlewares.IPRateLimiter) *gin.Engine {
+func buildTestRouter(
+	cfg *config.Config,
+	h *Handler,
+	limiter *middlewares.IPRateLimiter,
+) *gin.Engine {
 	r := gin.New()
 
 	r.Use(cors.New(cors.Config{
