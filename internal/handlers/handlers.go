@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/TheZeroSlave/zapsentry"
 	"github.com/chai2010/webp"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -21,6 +22,8 @@ import (
 	"github.com/ricehub-io/waitlist-api/internal/config"
 	"github.com/ricehub-io/waitlist-api/internal/db"
 	"github.com/ricehub-io/waitlist-api/internal/discord"
+	"github.com/ricehub-io/waitlist-api/internal/errs"
+	"github.com/ricehub-io/waitlist-api/internal/logger"
 	"github.com/ricehub-io/waitlist-api/internal/models"
 	"github.com/ricehub-io/waitlist-api/internal/storage"
 )
@@ -59,7 +62,14 @@ func NewHandler(
 func (h *Handler) GetPreviewRices(c *gin.Context) {
 	rices, err := h.db.FetchPreviewRices(c.Request.Context())
 	if err != nil {
-		h.logger.Error("Could not fetch preview rices", zap.Error(err))
+		l := logger.FromGinContext(c, h.logger)
+
+		wrapped := errs.NewDBError("FetchPreviewRices", err)
+		l.Error("Could not fetch preview rices",
+			zap.Error(wrapped),
+			zapsentry.Tag("db.op", wrapped.Op),
+		)
+
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -79,7 +89,14 @@ func (h *Handler) GetPreviewRices(c *gin.Context) {
 func (h *Handler) GetWaitlistEmailCount(c *gin.Context) {
 	count, err := h.db.WaitlistEmailCount(c.Request.Context())
 	if err != nil {
-		h.logger.Error("Could not fetch waitlist count", zap.Error(err))
+		l := logger.FromGinContext(c, h.logger)
+
+		wrapped := errs.NewDBError("WaitlistEmailCount", err)
+		l.Error("Could not fetch waitlist count",
+			zap.Error(wrapped),
+			zapsentry.Tag("db.op", wrapped.Op),
+		)
+
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -100,12 +117,15 @@ func (h *Handler) GetWaitlistEmailCount(c *gin.Context) {
 // @Failure 500 {object} APIError "Internal server error"
 // @Router /waitlist [post]
 func (h *Handler) CreateWaitlistEmail(c *gin.Context) {
+	l := logger.FromGinContext(c, h.logger)
+
 	var body models.CreateWaitlistEmailRequest
 	if err := c.ShouldBind(&body); err != nil {
 		sendErrors(c, http.StatusBadRequest, "could not parse request body", err.Error())
 		return
 	}
 
+	// unaimeds: bot prevention
 	if body.Website != "" {
 		c.Status(http.StatusCreated)
 		return
@@ -114,15 +134,21 @@ func (h *Handler) CreateWaitlistEmail(c *gin.Context) {
 	if err := h.db.InsertWaitlistEmail(c.Request.Context(), body.Email); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			sendErrors(c, http.StatusConflict, "this email address is already on waitlist!")
+			sendErrors(c, http.StatusConflict, "this email address is already on the waitlist!")
 			return
 		}
 
-		h.logger.Error("Could not insert waitlist email", zap.Error(err))
+		wrapped := errs.NewDBError("InsertWaitlistEmail", err)
+		l.Error("Could not insert waitlist email",
+			zap.Error(wrapped),
+			zapsentry.Tag("db.op", wrapped.Op),
+		)
+
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
+	l.Info("New waitlist email created", zap.String("email", body.Email))
 	c.Status(http.StatusCreated)
 }
 
@@ -137,7 +163,14 @@ func (h *Handler) CreateWaitlistEmail(c *gin.Context) {
 func (h *Handler) GetFoundingCreatorStats(c *gin.Context) {
 	stats, err := h.db.FetchSlotStats(c.Request.Context())
 	if err != nil {
-		h.logger.Error("Could not fetch slot stats", zap.Error(err))
+		l := logger.FromGinContext(c, h.logger)
+
+		wrapped := errs.NewDBError("FetchSlotStats", err)
+		l.Error("Could not fetch slot stats",
+			zap.Error(wrapped),
+			zapsentry.Tag("db.op", wrapped.Op),
+		)
+
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -147,7 +180,6 @@ func (h *Handler) GetFoundingCreatorStats(c *gin.Context) {
 		SlotsTaken:     stats.SlotsTaken,
 		SlotsAvailable: stats.SlotsTotal - stats.SlotsTaken,
 	}
-
 	c.JSON(http.StatusOK, dto)
 }
 
@@ -166,12 +198,15 @@ func (h *Handler) GetFoundingCreatorStats(c *gin.Context) {
 // @Failure 500 {object} APIError "Internal server error"
 // @Router /founders [post]
 func (h *Handler) CreateFoundingCreator(c *gin.Context) {
+	l := logger.FromGinContext(c, h.logger)
+
 	var body models.CreateFoundingCreatorRequest
 	if err := c.ShouldBind(&body); err != nil {
 		sendErrors(c, http.StatusBadRequest, "could not parse request body", err.Error())
 		return
 	}
 
+	// unaimeds: bot prevention
 	if body.Website != "" {
 		c.Status(http.StatusCreated)
 		return
@@ -194,7 +229,12 @@ func (h *Handler) CreateFoundingCreator(c *gin.Context) {
 			return
 		}
 
-		h.logger.Error("Could not insert founding applicant", zap.Error(err))
+		wrapped := errs.NewDBError("InsertFoundingApplicant", err)
+		l.Error("Could not insert founding applicant",
+			zap.Error(wrapped),
+			zapsentry.Tag("db.op", wrapped.Op),
+		)
+
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -203,12 +243,14 @@ func (h *Handler) CreateFoundingCreator(c *gin.Context) {
 		if err := discord.SendWebhook(
 			c.Request.Context(),
 			h.cfg.DiscordWebhookURL,
-			"New founding creator application has been received! @everyone",
+			"New founder application has been received! @everyone",
 		); err != nil {
-			h.logger.Error("Failed to send discord webhook", zap.Error(err))
+			wrapped := &errs.DiscordSendWebhookError{Cause: err}
+			l.Error("Could not send discord webhook", zap.Error(wrapped))
 		}
 	}
 
+	l.Info("New founder applicant created")
 	c.Status(http.StatusCreated)
 }
 
@@ -232,7 +274,9 @@ func (h *Handler) CreateFoundingCreator(c *gin.Context) {
 // @Failure 500 {object} APIError "Internal server error"
 // @Security AdminSecret
 // @Router /rices [post]
-func (h *Handler) CreatePreviewRice(c *gin.Context) {
+func (h *Handler) CreatePreviewRice(c *gin.Context) { //nolint: funlen
+	l := logger.FromGinContext(c, h.logger)
+
 	var body models.CreatePreviewRiceRequest
 	if err := c.ShouldBind(&body); err != nil {
 		sendErrors(c, http.StatusBadRequest, "could not parse request body", err.Error())
@@ -252,17 +296,21 @@ func (h *Handler) CreatePreviewRice(c *gin.Context) {
 	thumbnailKey := fmt.Sprintf("thumbnails/%s.webp", uuid.New())
 	f, err := openThumbnail(mime, body.Thumbnail)
 	if err != nil {
-		h.logger.Error("Could not open thumbnail file", zap.Error(err))
+		wrapped := &errs.OpenThumbnailError{Cause: err}
+		l.Error("Could not open thumbnail", zap.Error(wrapped))
+
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	defer closeSilent(f)
+	defer f.Close()
 
 	if err := h.storage.UploadFile(
 		c.Request.Context(),
 		h.cfg.S3MediaBucket, thumbnailKey, f, "image/webp",
 	); err != nil {
-		h.logger.Error("Could not upload thumbnail", zap.Error(err))
+		wrapped := &errs.UploadThumbnailError{Cause: err}
+		l.Error("Could not upload thumbnail file", zap.Error(wrapped))
+
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -278,35 +326,45 @@ func (h *Handler) CreatePreviewRice(c *gin.Context) {
 			return
 		}
 
-		h.logger.Error("Could not insert preview rice", zap.Error(err))
+		wrapped := errs.NewDBError("InsertPreviewRice", err)
+		l.Error("Could not insert preview rice",
+			zap.Error(wrapped),
+			zapsentry.Tag("db.op", wrapped.Op),
+		)
+
 		sendErrors(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
+	l.Info("New preview rice created",
+		zap.String("title", body.Title),
+		zap.Strings("tags", body.Tags),
+		zap.Float64p("price", body.Price),
+	)
 	c.Status(http.StatusCreated)
 }
 
 // -- HELPERS --
 type APIError struct {
-	Errors []string
+	Errors []string `json:"errors"`
 }
 
 // sendErrors sends HTTP response with given status code and errors.
 // Does not abort the connection, you have to return/abort manually.
 func sendErrors(c *gin.Context, status int, errs ...string) {
-	c.JSON(status, gin.H{"errors": errs})
+	c.JSON(status, APIError{Errors: errs})
 }
 
 func validateMimeType(fh *multipart.FileHeader, allowed map[string]struct{}) (string, bool, error) {
 	f, err := fh.Open()
 	if err != nil {
-		return "", false, fmt.Errorf("file header open: %w", err)
+		return "", false, fmt.Errorf("opening file header: %w", err)
 	}
-	defer closeSilent(f)
+	defer f.Close()
 
 	buf := make([]byte, 512)
 	if _, err := f.Read(buf); err != nil {
-		return "", false, fmt.Errorf("file read: %w", err)
+		return "", false, fmt.Errorf("reading file: %w", err)
 	}
 
 	mimeType := http.DetectContentType(buf)
@@ -334,18 +392,18 @@ func (t *tempFile) Close() error {
 func imageToWebP(fh *multipart.FileHeader) (*tempFile, error) {
 	srcFile, err := fh.Open()
 	if err != nil {
-		return nil, fmt.Errorf("file header open: %w", err)
+		return nil, fmt.Errorf("opening file header: %w", err)
 	}
-	defer closeSilent(srcFile)
+	defer srcFile.Close()
 
 	img, _, err := image.Decode(srcFile)
 	if err != nil {
-		return nil, fmt.Errorf("image decode: %w", err)
+		return nil, fmt.Errorf("decoding image: %w", err)
 	}
 
 	outFile, err := os.CreateTemp("", "ricehub-thumbnail-*")
 	if err != nil {
-		return nil, fmt.Errorf("os create temp: %w", err)
+		return nil, fmt.Errorf("creating temp file: %w", err)
 	}
 
 	if err := webp.Encode(outFile, img, &webp.Options{
@@ -354,18 +412,14 @@ func imageToWebP(fh *multipart.FileHeader) (*tempFile, error) {
 	}); err != nil {
 		_ = outFile.Close()
 		_ = os.Remove(outFile.Name())
-		return nil, fmt.Errorf("webp encode: %w", err)
+		return nil, fmt.Errorf("encoding webp: %w", err)
 	}
 
 	if _, err := outFile.Seek(0, io.SeekStart); err != nil {
 		_ = outFile.Close()
 		_ = os.Remove(outFile.Name())
-		return nil, fmt.Errorf("seek temp file: %w", err)
+		return nil, fmt.Errorf("seeking temp file: %w", err)
 	}
 
 	return &tempFile{outFile}, nil
-}
-
-func closeSilent(c io.Closer) {
-	_ = c.Close()
 }

@@ -69,7 +69,7 @@ func postMultipart(
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer closeSilent(resp.Body)
+	defer resp.Body.Close()
 
 	body := map[string]any{}
 	raw, _ := io.ReadAll(resp.Body)
@@ -83,7 +83,7 @@ func getJSON(t *testing.T, path string) (int, map[string]any) {
 	t.Helper()
 	resp, err := http.Get(testServer.URL + path)
 	require.NoError(t, err)
-	defer closeSilent(resp.Body)
+	defer resp.Body.Close()
 
 	var body map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
@@ -94,7 +94,7 @@ func postForm(t *testing.T, path string, values url.Values) (int, map[string]any
 	t.Helper()
 	resp, err := http.PostForm(testServer.URL+path, values)
 	require.NoError(t, err)
-	defer closeSilent(resp.Body)
+	defer resp.Body.Close()
 
 	body := map[string]any{}
 	b, _ := io.ReadAll(resp.Body)
@@ -121,7 +121,7 @@ func TestGetPreviewRices_Empty(t *testing.T) {
 	resetDB(t)
 	resp, err := http.Get(testServer.URL + "/rices")
 	require.NoError(t, err)
-	defer closeSilent(resp.Body)
+	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -138,7 +138,7 @@ func TestGetPreviewRices_WithRows(t *testing.T) {
 
 	resp, err := http.Get(testServer.URL + "/rices")
 	require.NoError(t, err)
-	defer closeSilent(resp.Body)
+	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -167,7 +167,7 @@ func TestGetPreviewRices_PriceNullableField(t *testing.T) {
 
 	resp, err := http.Get(testServer.URL + "/rices")
 	require.NoError(t, err)
-	defer closeSilent(resp.Body)
+	defer resp.Body.Close()
 
 	var body []map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
@@ -233,7 +233,7 @@ func TestCreateWaitlistEmail_DuplicateExact(t *testing.T) {
 	seedWaitlist(t, "alice@x.com")
 	status, body := postForm(t, "/waitlist", url.Values{"email": {"alice@x.com"}})
 	assert.Equal(t, http.StatusConflict, status)
-	assertErrorContains(t, body, "already on waitlist")
+	assertErrorContains(t, body, "already on the waitlist")
 }
 
 func TestCreateWaitlistEmail_DuplicateCaseInsensitive(t *testing.T) {
@@ -241,7 +241,7 @@ func TestCreateWaitlistEmail_DuplicateCaseInsensitive(t *testing.T) {
 	seedWaitlist(t, "Alice@X.com")
 	status, body := postForm(t, "/waitlist", url.Values{"email": {"alice@x.com"}})
 	assert.Equal(t, http.StatusConflict, status)
-	assertErrorContains(t, body, "already on waitlist")
+	assertErrorContains(t, body, "already on the waitlist")
 }
 
 // -- GET /founders --

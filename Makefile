@@ -12,7 +12,7 @@ build:
 	@mkdir -p $(OUT_DIR)
 	go build $(GOFLAGS) $(LDFLAGS) -o $(OUT_DIR)/$(OUT_BIN) $(CMD)
 
-## run: run the app without compiling a binary
+## run: run http server without building
 run:
 	go run $(CMD)
 

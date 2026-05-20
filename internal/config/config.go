@@ -14,7 +14,7 @@ type Config struct {
 	Environment        string `env:"ENVIRONMENT, default=dev"`
 	BindAddress        string `env:"BIND_ADDRESS, default=127.0.0.1:3000"`
 	DatabaseURL        string `env:"DATABASE_URL, required"`
-	CORSOrigin         string `env:"CORS_ORIGIN"`
+	CORSOrigin         string `env:"CORS_ORIGIN, default=*"`
 	S3BaseURL          string `env:"S3_BASE_URL, required"`
 	S3MediaBucket      string `env:"S3_MEDIA_BUCKET, required"`
 	S3AccessKey        string `env:"S3_ACCESS_KEY, required"`
@@ -23,6 +23,7 @@ type Config struct {
 	RateLimitPerMinute int    `env:"RATE_LIMIT_PER_MINUTE, default=5"`
 	RateLimitBurst     int    `env:"RATE_LIMIT_BURST, default=3"`
 	DiscordWebhookURL  string `env:"DISCORD_WEBHOOK_URL"`
+	SentryDSN          string `env:"SENTRY_DSN"`
 }
 
 // NewConfig tries to load .env file in current working directory and parse it into a config struct.
@@ -33,9 +34,10 @@ func NewConfig(ctx context.Context) (*Config, error) {
 	}
 
 	if env := os.Getenv("ENVIRONMENT"); env == "" {
-		doppEnv := os.Getenv("DOPPLER_ENVIRONMENT")
-		if err := os.Setenv("ENVIRONMENT", doppEnv); err != nil {
-			return nil, fmt.Errorf("setting 'ENVIRONMENT' env variable: %w", err)
+		if doppEnv := os.Getenv("DOPPLER_ENVIRONMENT"); doppEnv != "" {
+			if err := os.Setenv("ENVIRONMENT", doppEnv); err != nil {
+				return nil, fmt.Errorf("setting 'ENVIRONMENT' env variable: %w", err)
+			}
 		}
 	}
 
@@ -53,4 +55,12 @@ func NewConfig(ctx context.Context) (*Config, error) {
 	}
 
 	return &c, nil
+}
+
+func (c *Config) IsProd() bool {
+	return c.Environment == "prod"
+}
+
+func (c *Config) WithSentry() bool {
+	return c.SentryDSN != ""
 }

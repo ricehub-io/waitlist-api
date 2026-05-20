@@ -25,6 +25,15 @@ func NewDatabase(url string) (*Database, error) {
 		return nil, err
 	}
 
+	var two uint
+	err = pool.QueryRow(ctx, "SELECT 2").Scan(&two)
+	if err != nil {
+		return nil, fmt.Errorf("test query scan: %w", err)
+	}
+	if two != 2 {
+		return nil, fmt.Errorf("invalid test query result: got %d, expected 2", two)
+	}
+
 	return &Database{pool}, nil
 }
 
@@ -40,10 +49,7 @@ func (db *Database) Pool() *pgxpool.Pool {
 func (db *Database) InsertWaitlistEmail(ctx context.Context, email string) error {
 	const query = "INSERT INTO waitlist_emails (email) VALUES ($1)"
 	_, err := db.pool.Exec(ctx, query, email)
-	if err != nil {
-		return fmt.Errorf("insert waitlist email: %w", err)
-	}
-	return nil
+	return err
 }
 
 func (db *Database) InsertFoundingApplicant(
@@ -55,19 +61,12 @@ func (db *Database) InsertFoundingApplicant(
 	VALUES ($1, $2, $3)
 	`
 	_, err := db.pool.Exec(ctx, query, username, email, dotfilesURL)
-	if err != nil {
-		return fmt.Errorf("insert founding applicant: %w", err)
-	}
-	return nil
+	return err
 }
 
 func (db *Database) FetchSlotStats(ctx context.Context) (models.SlotStats, error) {
 	const query = "SELECT slots_total, slots_taken FROM settings LIMIT 1"
-	s, err := rowToStruct[models.SlotStats](ctx, db.pool, query)
-	if err != nil {
-		return s, fmt.Errorf("fetch slot stats: %w", err)
-	}
-	return s, nil
+	return rowToStruct[models.SlotStats](ctx, db.pool, query)
 }
 
 func (db *Database) FetchPreviewRices(ctx context.Context) (models.PreviewRices, error) {
@@ -76,17 +75,7 @@ func (db *Database) FetchPreviewRices(ctx context.Context) (models.PreviewRices,
 	FROM preview_rices
 	ORDER BY created_at DESC
 	`
-	rows, err := db.pool.Query(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("fetch preview rices: %w", err)
-	}
-
-	rices, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.PreviewRice])
-	if err != nil {
-		return nil, fmt.Errorf("fetch preview rices: %w", err)
-	}
-
-	return rices, nil
+	return rowsToStruct[models.PreviewRice](ctx, db.pool, query)
 }
 
 func (db *Database) InsertPreviewRice(
@@ -102,45 +91,60 @@ func (db *Database) InsertPreviewRice(
 	VALUES ($1, $2, $3, $4, $5, $6)
 	`
 	_, err := db.pool.Exec(ctx, query, title, price, thumbnailPath, starCount, downloadCount, tags)
-	if err != nil {
-		return fmt.Errorf("insert preview rice: %w", err)
-	}
-	return nil
+	return err
 }
 
 func (db *Database) WaitlistEmailCount(ctx context.Context) (count int, err error) {
 	const query = "SELECT COUNT(*) FROM waitlist_emails"
-	if err := db.pool.QueryRow(ctx, query).Scan(&count); err != nil {
-		return -1, fmt.Errorf("waitlist email count: %w", err)
-	}
+	err = db.Pool().QueryRow(ctx, query).Scan(&count)
 	return count, err
 }
 
 // -- HELPERS --
-type DatabaseExecutor interface {
+type dbExecutor interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
-// rowToStruct executes given query using the provided
-// database executor (pool/tx), scanning the result into a struct.
+// rowToStruct executes given query using the provided database executor,
+// scanning the result into a struct.
 // Returns a wrapped error if either query or scanning failed.
 func rowToStruct[T any](
 	ctx context.Context,
-	exec DatabaseExecutor,
+	exec dbExecutor,
 	query string,
 	args ...any,
-) (T, error) {
-	var zero T
-
+) (zero T, err error) {
 	rows, err := exec.Query(ctx, query, args...)
 	if err != nil {
-		return zero, fmt.Errorf("db executor query: %w", err)
+		return zero, fmt.Errorf("query: %w", err)
 	}
 
 	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[T])
 	if err != nil {
-		return zero, fmt.Errorf("pgx collect one row: %w", err)
+		return zero, fmt.Errorf("collect one row: %w", err)
 	}
 
 	return row, nil
+}
+
+// rowToStructs executes given query using the provided database executor,
+// scanning the result into a struct slice.
+// Returns a wrapped error if either query or scanning failed.
+func rowsToStruct[T any](
+	ctx context.Context,
+	exec dbExecutor,
+	query string,
+	args ...any,
+) (zero []T, err error) {
+	rows, err := exec.Query(ctx, query, args...)
+	if err != nil {
+		return zero, fmt.Errorf("query: %w", err)
+	}
+
+	cRows, err := pgx.CollectRows(rows, pgx.RowToStructByName[T])
+	if err != nil {
+		return zero, fmt.Errorf("collect rows: %w", err)
+	}
+
+	return cRows, nil
 }

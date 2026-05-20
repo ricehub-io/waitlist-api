@@ -23,7 +23,7 @@ func SendWebhook(ctx context.Context, webhookURL, message string) error {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhookURL, bytes.NewBuffer(body))
 	if err != nil {
-		return fmt.Errorf("new request: %w", err)
+		return fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
